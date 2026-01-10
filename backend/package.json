@@ -8,6 +8,8 @@
     "start": "next start"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "jimp": "^0.22.12",
     "next": "^15.0.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

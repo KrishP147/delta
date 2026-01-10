@@ -1,8 +1,8 @@
 /**
  * Color Vision Test Screen
  *
- * A simple color discrimination test with multiple choice answers.
- * Much more reliable than rendering Ishihara patterns.
+ * A simplified Ishihara-style test with multiple choice answers.
+ * Shows colored circle patterns forming numbers.
  *
  * ACCESSIBILITY:
  * - Large, tappable option buttons
@@ -16,8 +16,8 @@ import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { COLORS, SIZES } from "../constants/accessibility";
 import {
-  TEST_QUESTIONS,
-  QUICK_TEST_IDS,
+  TEST_PLATES,
+  QUICK_TEST_PLATE_IDS,
   TestResponse,
   analyzeColorVision,
 } from "../constants/ishihara";
@@ -27,32 +27,32 @@ import { speak } from "../services/speech";
 
 export default function ColorTestScreen() {
   const router = useRouter();
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
+  const [currentPlateIndex, setCurrentPlateIndex] = useState(0);
   const [responses, setResponses] = useState<TestResponse[]>([]);
 
-  // Use quick test (3 questions) for faster onboarding
-  const testQuestions = QUICK_TEST_IDS.map(
-    (id) => TEST_QUESTIONS.find((q) => q.id === id)!,
+  // Use quick test (3 plates) for faster onboarding
+  const testPlates = QUICK_TEST_PLATE_IDS.map(
+    (id) => TEST_PLATES.find((p) => p.id === id)!,
   );
-  const currentQuestion = testQuestions[currentQuestionIndex];
-  const isLastQuestion = currentQuestionIndex === testQuestions.length - 1;
-  const progress = ((currentQuestionIndex + 1) / testQuestions.length) * 100;
+  const currentPlate = testPlates[currentPlateIndex];
+  const isLastPlate = currentPlateIndex === testPlates.length - 1;
+  const progress = ((currentPlateIndex + 1) / testPlates.length) * 100;
 
   const handleSelectOption = (option: string) => {
     // Record response
     const newResponses: TestResponse[] = [
       ...responses,
-      { questionId: currentQuestion.id, answer: option },
+      { plateId: currentPlate.id, answer: option },
     ];
     setResponses(newResponses);
 
-    if (isLastQuestion) {
+    if (isLastPlate) {
       // Analyze results and navigate
       finishTest(newResponses);
     } else {
-      // Move to next question
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      speak(`Question ${currentQuestionIndex + 2} of ${testQuestions.length}`);
+      // Move to next plate
+      setCurrentPlateIndex(currentPlateIndex + 1);
+      speak(`Plate ${currentPlateIndex + 2} of ${testPlates.length}`);
     }
   };
 
@@ -82,19 +82,19 @@ export default function ColorTestScreen() {
             <View style={[styles.progressFill, { width: `${progress}%` }]} />
           </View>
           <Text style={styles.progressText}>
-            {currentQuestionIndex + 1} of {testQuestions.length}
+            {currentPlateIndex + 1} of {testPlates.length}
           </Text>
         </View>
 
         {/* Question */}
-        <Text style={styles.question}>{currentQuestion.question}</Text>
+        <Text style={styles.question}>What number do you see?</Text>
 
-        {/* Color display */}
-        <ColorTestPlate question={currentQuestion} />
+        {/* Ishihara plate with colored circles */}
+        <ColorTestPlate plate={currentPlate} />
 
         {/* Multiple choice options */}
         <View style={styles.optionsContainer}>
-          {currentQuestion.options.map((option, index) => (
+          {currentPlate.options.map((option, index) => (
             <Pressable
               key={index}
               style={styles.optionButton}
@@ -119,10 +119,11 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: SIZES.spacingLarge,
+    alignItems: "center",
   },
   progressContainer: {
     width: "100%",
-    marginBottom: SIZES.spacingLarge,
+    marginBottom: SIZES.spacingMedium,
   },
   progressBar: {
     width: "100%",
@@ -147,11 +148,12 @@ const styles = StyleSheet.create({
     fontWeight: "bold",
     color: COLORS.textPrimary,
     textAlign: "center",
-    marginBottom: SIZES.spacingMedium,
+    marginBottom: SIZES.spacingSmall,
   },
   optionsContainer: {
-    marginTop: SIZES.spacingLarge,
-    gap: SIZES.spacingMedium,
+    width: "100%",
+    marginTop: SIZES.spacingMedium,
+    gap: SIZES.spacingSmall,
   },
   optionButton: {
     backgroundColor: COLORS.backgroundSecondary,
