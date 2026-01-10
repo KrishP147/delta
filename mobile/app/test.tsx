@@ -10,7 +10,7 @@
  * - No typing required
  */
 
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { View, Text, StyleSheet, Pressable, ScrollView } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -30,13 +30,29 @@ export default function ColorTestScreen() {
   const [currentPlateIndex, setCurrentPlateIndex] = useState(0);
   const [responses, setResponses] = useState<TestResponse[]>([]);
 
-  // Use quick test (3 plates) for faster onboarding
+  // Use 10-plate test for comprehensive onboarding
   const testPlates = QUICK_TEST_PLATE_IDS.map(
     (id) => TEST_PLATES.find((p) => p.id === id)!,
   );
   const currentPlate = testPlates[currentPlateIndex];
   const isLastPlate = currentPlateIndex === testPlates.length - 1;
   const progress = ((currentPlateIndex + 1) / testPlates.length) * 100;
+
+  // Shuffle function for randomizing answer order
+  const shuffleArray = <T,>(array: T[]): T[] => {
+    const shuffled = [...array];
+    for (let i = shuffled.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+    return shuffled;
+  };
+
+  // Randomize options for current plate (memoized so it doesn't change on re-render)
+  const shuffledOptions = useMemo(
+    () => shuffleArray(currentPlate.options),
+    [currentPlate.id]
+  );
 
   const handleSelectOption = (option: string) => {
     // Record response
@@ -92,9 +108,9 @@ export default function ColorTestScreen() {
         {/* Ishihara plate with colored circles */}
         <ColorTestPlate plate={currentPlate} />
 
-        {/* Multiple choice options */}
+        {/* Multiple choice options - randomized */}
         <View style={styles.optionsContainer}>
-          {currentPlate.options.map((option, index) => (
+          {shuffledOptions.map((option, index) => (
             <Pressable
               key={index}
               style={styles.optionButton}
@@ -166,7 +182,7 @@ const styles = StyleSheet.create({
   },
   optionText: {
     color: COLORS.textPrimary,
-    fontSize: SIZES.textMedium,
-    fontWeight: "600",
+    fontSize: 28,
+    fontWeight: "700",
   },
 });

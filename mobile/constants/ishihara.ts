@@ -37,7 +37,7 @@ export const TEST_PLATES: TestPlate[] = [
     deutanAnswer: null, // Cannot see
     backgroundColor: "#74B72E", // Green dots
     foregroundColor: "#D62828", // Red number
-    options: ["12", "17", "21", "Can't see a number"],
+    options: ["12", "17", "21", "Can't see"],
     description: "A circle of colored dots with a number hidden inside",
   },
   {
@@ -47,7 +47,7 @@ export const TEST_PLATES: TestPlate[] = [
     deutanAnswer: "3",
     backgroundColor: "#FFB703", // Yellow/orange dots
     foregroundColor: "#219EBC", // Blue-ish number
-    options: ["8", "3", "6", "Can't see a number"],
+    options: ["8", "3", "6", "Can't see"],
     description: "A circle of colored dots with a number hidden inside",
   },
   {
@@ -57,7 +57,7 @@ export const TEST_PLATES: TestPlate[] = [
     deutanAnswer: "70",
     backgroundColor: "#8ECAE6", // Light blue dots
     foregroundColor: "#FB8500", // Orange number
-    options: ["29", "70", "27", "Can't see a number"],
+    options: ["29", "70", "27", "Can't see"],
     description: "A circle of colored dots with a number hidden inside",
   },
   {
@@ -67,7 +67,7 @@ export const TEST_PLATES: TestPlate[] = [
     deutanAnswer: "2",
     backgroundColor: "#90BE6D", // Yellow-green dots
     foregroundColor: "#F94144", // Red number
-    options: ["5", "2", "8", "Can't see a number"],
+    options: ["5", "2", "8", "Can't see"],
     description: "A circle of colored dots with a number hidden inside",
   },
   {
@@ -77,16 +77,65 @@ export const TEST_PLATES: TestPlate[] = [
     deutanAnswer: "21",
     backgroundColor: "#43AA8B", // Teal dots
     foregroundColor: "#F3722C", // Orange-red number
-    options: ["74", "21", "71", "Can't see a number"],
+    options: ["74", "21", "71", "Can't see"],
+    description: "A circle of colored dots with a number hidden inside",
+  },
+  {
+    id: 6,
+    normalAnswer: "45",
+    protanAnswer: null,
+    deutanAnswer: null,
+    backgroundColor: "#7CB518", // Green dots
+    foregroundColor: "#E63946", // Red number
+    options: ["45", "54", "15", "Can't see"],
+    description: "A circle of colored dots with a number hidden inside",
+  },
+  {
+    id: 7,
+    normalAnswer: "6",
+    protanAnswer: "5",
+    deutanAnswer: "5",
+    backgroundColor: "#FFB4A2", // Peachy pink dots
+    foregroundColor: "#6D6875", // Purple-gray number
+    options: ["6", "5", "9", "Can't see"],
+    description: "A circle of colored dots with a number hidden inside",
+  },
+  {
+    id: 8,
+    normalAnswer: "16",
+    protanAnswer: null,
+    deutanAnswer: null,
+    backgroundColor: "#52B788", // Green dots
+    foregroundColor: "#D00000", // Red number
+    options: ["16", "61", "18", "Can't see"],
+    description: "A circle of colored dots with a number hidden inside",
+  },
+  {
+    id: 9,
+    normalAnswer: "42",
+    protanAnswer: "4",
+    deutanAnswer: "2",
+    backgroundColor: "#FFDD00", // Yellow dots
+    foregroundColor: "#1982C4", // Blue number
+    options: ["42", "4", "2", "Can't see"],
+    description: "A circle of colored dots with a number hidden inside",
+  },
+  {
+    id: 10,
+    normalAnswer: "97",
+    protanAnswer: null,
+    deutanAnswer: null,
+    backgroundColor: "#80ED99", // Light green dots
+    foregroundColor: "#FF5733", // Orange-red number
+    options: ["97", "79", "67", "Can't see"],
     description: "A circle of colored dots with a number hidden inside",
   },
 ];
 
 /**
- * Quick 3-question test for faster onboarding
- * Uses the most discriminating plates
+ * Full 10-question test for comprehensive assessment
  */
-export const QUICK_TEST_PLATE_IDS = [1, 2, 4];
+export const QUICK_TEST_PLATE_IDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export interface TestResponse {
   plateId: number;

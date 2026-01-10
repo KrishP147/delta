@@ -9,6 +9,7 @@
   },
   "dependencies": {
     "@google/generative-ai": "^0.24.1",
+    "expo": "^54.0.31",
     "jimp": "^0.22.12",
     "next": "^15.0.0",
     "onnxruntime-node": "^1.23.2",

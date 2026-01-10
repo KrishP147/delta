@@ -12,7 +12,6 @@ import {
   SignalState,
   ColorblindnessType,
   getSignalMessage,
-  TIMING,
 } from "../constants/accessibility";
 
 // ============================================================
@@ -27,7 +26,6 @@ const USE_ELEVENLABS = false;
 const FS = FileSystem as any;
 
 let lastSpokenState: SignalState | null = null;
-let lastSpokenTime = 0;
 let soundObject: Audio.Sound | null = null;
 
 // Cache for downloaded audio files
@@ -59,12 +57,7 @@ async function speakElevenLabs(text: string): Promise<boolean> {
     const cacheKey = text.replace(/[^a-z0-9]/gi, "_").toLowerCase();
     const cacheFile = `${FS.cacheDirectory}tts_${cacheKey}.mp3`;
 
-    let textToPlay = cacheFile;
-
-    // specific check if file exists in cache, if not fetch from API
-    // Using simple memory cache to track if we downloaded it,
-    // but also checking fs existence would be robust.
-    // simpler: check if it is in our memory cache map
+    // Check if it is in our memory cache map
     if (!audioCache[text]) {
       // Fetch from backend
       const response = await fetch(`${API_URL}/api/tts`, {
@@ -112,21 +105,15 @@ async function speakElevenLabs(text: string): Promise<boolean> {
 
 /**
  * Speaks the traffic signal state if it has changed
- * Includes debouncing to avoid repetitive announcements
+ * Only announces when the state actually changes (not on every detection)
  */
 export async function speakSignalState(
   state: SignalState,
   colorblindType: ColorblindnessType,
   force = false,
 ): Promise<void> {
-  const now = Date.now();
-
-  // Skip if same state was announced recently (debouncing)
-  if (
-    !force &&
-    state === lastSpokenState &&
-    now - lastSpokenTime < TIMING.audioDebounce
-  ) {
+  // Only announce when state actually changes (or if forced)
+  if (!force && state === lastSpokenState) {
     return;
   }
 
@@ -162,7 +149,6 @@ export async function speakSignalState(
   }
 
   lastSpokenState = state;
-  lastSpokenTime = now;
 }
 
 /**
@@ -213,9 +199,8 @@ export async function isSpeaking(): Promise<boolean> {
 }
 
 /**
- * Resets the debounce state (useful when resuming the app)
+ * Resets the speech state (useful when resuming the app)
  */
 export function resetSpeechState(): void {
   lastSpokenState = null;
-  lastSpokenTime = 0;
 }
