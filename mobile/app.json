@@ -32,7 +32,9 @@
         "ACCESS_FINE_LOCATION",
         "ACCESS_COARSE_LOCATION"
       ],
-      "edgeToEdgeEnabled": true
+      "softwareKeyboardLayoutMode": "pan",
+      "navigationBarColor": "#000000",
+      "navigationBarStyle": "dark-content"
     },
     "platforms": ["ios", "android"],
     "plugins": [

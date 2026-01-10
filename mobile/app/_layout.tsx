@@ -5,12 +5,14 @@
  * - Onboarding flow for first-time users
  * - Tab navigation for main app
  * - Global styles and dark theme
+ * - Android navigation bar handling
  */
 
 import { useEffect, useState } from "react";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { View, StyleSheet, ActivityIndicator, Text } from "react-native";
+import { View, StyleSheet, ActivityIndicator, Text, Platform } from "react-native";
+import * as NavigationBar from "expo-navigation-bar";
 import { COLORS } from "../constants/accessibility";
 import { useAppStore } from "../store/useAppStore";
 
@@ -19,6 +21,15 @@ export default function RootLayout() {
   const { hasCompletedOnboarding } = useAppStore();
 
   useEffect(() => {
+    // Configure Android navigation bar
+    if (Platform.OS === "android") {
+      NavigationBar.setBackgroundColorAsync(COLORS.background);
+      NavigationBar.setButtonStyleAsync("light");
+      // Hide navigation bar for immersive mode
+      NavigationBar.setVisibilityAsync("hidden");
+      NavigationBar.setBehaviorAsync("overlay-swipe");
+    }
+
     // Small delay to ensure store is hydrated from AsyncStorage
     const timer = setTimeout(() => {
       setIsLoading(false);
@@ -39,7 +50,7 @@ export default function RootLayout() {
 
   return (
     <View style={styles.container}>
-      <StatusBar style="light" />
+      <StatusBar style="light" hidden={false} />
       <Stack
         screenOptions={{
           headerStyle: {

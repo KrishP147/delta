@@ -2,7 +2,18 @@
   "permissions": {
     "allow": [
       "Bash(npm install:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(git commit:*)",
+      "Bash(curl:*)",
+      "Bash(ipconfig:*)",
+      "Bash(taskkill:*)",
+      "Bash(EXPO_NO_INTERACTIVE=0 npx expo start:*)",
+      "Bash(npx expo start --tunnel)",
+      "Bash(npx expo start --lan)",
+      "Bash(node -e:*)",
+      "Bash(npx -y qrcode-terminal \"exp://172.17.79.69:8081\")",
+      "Bash(qrcode-terminal:*)",
+      "Bash(netstat:*)"
     ]
   }
 }
