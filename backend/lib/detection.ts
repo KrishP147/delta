@@ -1,11 +1,12 @@
 /**
- * Traffic Signal Detection using Google Gemini Vision
+ * Traffic Signal Detection using Roboflow
  *
- * Uses Gemini to reliably detect traffic lights and their state.
- * Only reports a signal when it's confident a traffic light is present.
+ * Uses a pre-trained YOLO model hosted on Roboflow to detect traffic lights
+ * and their colors (red, yellow, green).
+ *
+ * Free tier: 10,000 calls/month
+ * Model: Traffic light detection with color classification
  */
-
-import { GoogleGenerativeAI } from "@google/generative-ai";
 
 export type SignalState = "red" | "yellow" | "green" | "flashing" | "unknown";
 
@@ -15,38 +16,29 @@ export interface DetectionResult {
   message: string;
 }
 
-const PROMPT = `You are a traffic light detection system for a mobile accessibility app that helps colorblind and visually impaired users navigate safely.
+interface RoboflowPrediction {
+  class: string;
+  confidence: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
 
-Analyze this image and determine if there is a traffic light visible, and if so, what color is currently illuminated (lit up/glowing).
-
-IMPORTANT RULES:
-1. ONLY report a traffic light if you can clearly see one in the image
-2. Look for the ILLUMINATED/GLOWING light - traffic lights have 3 lights but only one is lit at a time
-3. If there is no traffic light visible, respond with state "unknown"
-4. Be conservative - only report high confidence when you're certain
-
-Respond with ONLY a JSON object in this exact format, no other text:
-{"state": "red", "confidence": 0.95}
-
-Valid states: "red", "yellow", "green", "unknown"
-Confidence should be between 0.0 and 1.0
-
-Examples:
-- Clear red light glowing: {"state": "red", "confidence": 0.95}
-- Green light visible but far away: {"state": "green", "confidence": 0.7}
-- No traffic light in image: {"state": "unknown", "confidence": 0}
-- Something that might be a traffic light but unclear: {"state": "unknown", "confidence": 0.2}`;
+interface RoboflowResponse {
+  predictions: RoboflowPrediction[];
+}
 
 /**
- * Analyzes an image using Gemini Vision to detect traffic signals
+ * Detect traffic lights using Roboflow's hosted model
  */
 export async function detectSignal(
   base64Image: string,
 ): Promise<DetectionResult> {
-  const apiKey = process.env.GEMINI_API_KEY;
+  const apiKey = process.env.ROBOFLOW_API_KEY;
 
   if (!apiKey) {
-    console.error("GEMINI_API_KEY not set");
+    console.error("ROBOFLOW_API_KEY not set");
     return {
       state: "unknown",
       confidence: 0,
@@ -55,31 +47,31 @@ export async function detectSignal(
   }
 
   try {
-    const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-    });
-
-    // Remove data URL prefix if present to get pure base64
+    // Remove data URL prefix if present
     const base64Data = base64Image.replace(/^data:image\/\w+;base64,/, "");
 
-    const result = await model.generateContent([
-      PROMPT,
+    // Call Roboflow inference API
+    // Using the traffic light model that detects red, yellow, green
+    const response = await fetch(
+      `https://detect.roboflow.com/traffic-light-cnlh5/1?api_key=${apiKey}`,
       {
-        inlineData: {
-          mimeType: "image/jpeg",
-          data: base64Data,
+        method: "POST",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
         },
+        body: base64Data,
       },
-    ]);
+    );
 
-    const response = result.response;
-    const content = response.text();
-    console.log("Gemini response:", content);
+    if (!response.ok) {
+      throw new Error(`Roboflow API error: ${response.status}`);
+    }
 
-    // Parse the JSON response
-    const jsonMatch = content.match(/\{[\s\S]*?\}/);
-    if (!jsonMatch) {
+    const data: RoboflowResponse = await response.json();
+
+    console.log("Roboflow predictions:", JSON.stringify(data.predictions));
+
+    if (!data.predictions || data.predictions.length === 0) {
       return {
         state: "unknown",
         confidence: 0,
@@ -87,12 +79,44 @@ export async function detectSignal(
       };
     }
 
-    const parsed = JSON.parse(jsonMatch[0]);
-    const state = parsed.state as SignalState;
-    const confidence = parsed.confidence as number;
+    // Find the highest confidence traffic light prediction
+    // Filter for traffic light colors
+    const trafficLightPredictions = data.predictions.filter((p) =>
+      ["red", "yellow", "green", "go", "stop", "warning"].includes(
+        p.class.toLowerCase(),
+      ),
+    );
 
-    // Only report if confidence is above threshold
-    if (state === "unknown" || confidence < 0.5) {
+    if (trafficLightPredictions.length === 0) {
+      return {
+        state: "unknown",
+        confidence: 0,
+        message: "No traffic signal detected",
+      };
+    }
+
+    // Get the prediction with highest confidence
+    const best = trafficLightPredictions.reduce((a, b) =>
+      a.confidence > b.confidence ? a : b,
+    );
+
+    // Map class names to our states
+    const classLower = best.class.toLowerCase();
+    let state: SignalState = "unknown";
+
+    if (classLower === "red" || classLower === "stop") {
+      state = "red";
+    } else if (
+      classLower === "yellow" ||
+      classLower === "warning" ||
+      classLower === "amber"
+    ) {
+      state = "yellow";
+    } else if (classLower === "green" || classLower === "go") {
+      state = "green";
+    }
+
+    if (state === "unknown" || best.confidence < 0.4) {
       return {
         state: "unknown",
         confidence: 0,
@@ -108,11 +132,13 @@ export async function detectSignal(
       unknown: "No signal detected",
     };
 
-    console.log(`Detected: ${state} with confidence ${confidence}`);
+    console.log(
+      `Detected: ${state} (confidence: ${best.confidence.toFixed(2)})`,
+    );
 
     return {
       state,
-      confidence,
+      confidence: best.confidence,
       message: messages[state],
     };
   } catch (error) {

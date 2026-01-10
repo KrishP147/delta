@@ -50,17 +50,17 @@ export const SIZES = {
 };
 
 export const TIMING = {
-  // Frame capture interval (ms) - balance between responsiveness and API rate limits
-  captureInterval: 4000, // 4 seconds to avoid hitting Gemini rate limits
+  // Frame capture interval (ms) - local detection is fast, can be frequent
+  captureInterval: 1000, // 1 second - local detection is fast
 
   // Debounce for audio announcements (ms) - avoid repeating same state
-  audioDebounce: 3000,
+  audioDebounce: 2500,
 
   // Minimum confidence to announce (0-1)
   minConfidenceToAnnounce: 0.5,
 
   // API timeout (ms)
-  apiTimeout: 15000, // 15 seconds - Gemini can be slow
+  apiTimeout: 8000,
 };
 
 export type SignalState = "red" | "yellow" | "green" | "flashing" | "unknown";
