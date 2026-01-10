@@ -1,0 +1,42 @@
+{
+  "expo": {
+    "name": "Delta",
+    "slug": "delta",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#000000"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "infoPlist": {
+        "NSCameraUsageDescription": "Delta needs camera access to detect traffic signals and help you navigate safely.",
+        "NSMicrophoneUsageDescription": "Delta may use the microphone for voice commands in future updates."
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#000000"
+      },
+      "permissions": ["CAMERA"],
+      "edgeToEdgeEnabled": true
+    },
+    "platforms": ["ios", "android"],
+    "plugins": [
+      "expo-router",
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Delta needs camera access to detect traffic signals and keep you safe."
+        }
+      ]
+    ],
+    "scheme": "delta"
+  }
+}
