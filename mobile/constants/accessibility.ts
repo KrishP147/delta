@@ -11,22 +11,22 @@
 
 export const COLORS = {
   // Background - dark for high contrast and reduced eye strain
-  background: '#000000',
-  backgroundSecondary: '#1A1A1A',
+  background: "#000000",
+  backgroundSecondary: "#1A1A1A",
 
   // Signal state colors - high saturation for visibility
-  red: '#FF3B30',
-  yellow: '#FFD60A',
-  green: '#30D158',
-  unknown: '#8E8E93',
+  red: "#FF3B30",
+  yellow: "#FFD60A",
+  green: "#30D158",
+  unknown: "#8E8E93",
 
   // Text - high contrast
-  textPrimary: '#FFFFFF',
-  textSecondary: '#AEAEB2',
+  textPrimary: "#FFFFFF",
+  textSecondary: "#AEAEB2",
 
   // UI elements
-  border: '#38383A',
-  buttonBackground: '#2C2C2E',
+  border: "#38383A",
+  buttonBackground: "#2C2C2E",
 };
 
 export const SIZES = {
@@ -50,20 +50,20 @@ export const SIZES = {
 };
 
 export const TIMING = {
-  // Frame capture interval (ms) - balance between responsiveness and battery
-  captureInterval: 800,
+  // Frame capture interval (ms) - balance between responsiveness and API rate limits
+  captureInterval: 4000, // 4 seconds to avoid hitting Gemini rate limits
 
   // Debounce for audio announcements (ms) - avoid repeating same state
-  audioDebounce: 2000,
+  audioDebounce: 3000,
 
   // Minimum confidence to announce (0-1)
-  minConfidenceToAnnounce: 0.3,
+  minConfidenceToAnnounce: 0.5,
 
   // API timeout (ms)
-  apiTimeout: 5000,
+  apiTimeout: 15000, // 15 seconds - Gemini can be slow
 };
 
-export type SignalState = 'red' | 'yellow' | 'green' | 'flashing' | 'unknown';
+export type SignalState = "red" | "yellow" | "green" | "flashing" | "unknown";
 
 /**
  * Colorblindness Types
@@ -76,12 +76,12 @@ export type SignalState = 'red' | 'yellow' | 'green' | 'flashing' | 'unknown';
  * - Low Vision: General low vision, relies primarily on audio
  */
 export type ColorblindnessType =
-  | 'normal'
-  | 'protanopia'    // Red-blind
-  | 'deuteranopia'  // Green-blind
-  | 'tritanopia'    // Blue-yellow blind
-  | 'low_vision'    // Relies on audio
-  | 'unknown';
+  | "normal"
+  | "protanopia" // Red-blind
+  | "deuteranopia" // Green-blind
+  | "tritanopia" // Blue-yellow blind
+  | "low_vision" // Relies on audio
+  | "unknown";
 
 /**
  * Signal messages tailored to colorblindness type
@@ -91,35 +91,36 @@ export type ColorblindnessType =
  */
 export const getSignalMessage = (
   state: SignalState,
-  colorblindType: ColorblindnessType
+  colorblindType: ColorblindnessType,
 ): string => {
   const needsPositionCues =
-    colorblindType === 'protanopia' ||
-    colorblindType === 'deuteranopia' ||
-    colorblindType === 'low_vision';
+    colorblindType === "protanopia" ||
+    colorblindType === "deuteranopia" ||
+    colorblindType === "low_vision";
 
-  const messages: Record<SignalState, { standard: string; enhanced: string }> = {
-    red: {
-      standard: 'Red light. Stop.',
-      enhanced: 'Red light at top. Stop.',
-    },
-    yellow: {
-      standard: 'Yellow light. Prepare to stop.',
-      enhanced: 'Yellow light in middle. Prepare to stop.',
-    },
-    green: {
-      standard: 'Green light. Safe to proceed.',
-      enhanced: 'Green light at bottom. Safe to proceed.',
-    },
-    flashing: {
-      standard: 'Warning. Flashing signal.',
-      enhanced: 'Warning. Flashing signal. Proceed with caution.',
-    },
-    unknown: {
-      standard: '',
-      enhanced: '',
-    },
-  };
+  const messages: Record<SignalState, { standard: string; enhanced: string }> =
+    {
+      red: {
+        standard: "Red light. Stop.",
+        enhanced: "Red light at top. Stop.",
+      },
+      yellow: {
+        standard: "Yellow light. Prepare to stop.",
+        enhanced: "Yellow light in middle. Prepare to stop.",
+      },
+      green: {
+        standard: "Green light. Safe to proceed.",
+        enhanced: "Green light at bottom. Safe to proceed.",
+      },
+      flashing: {
+        standard: "Warning. Flashing signal.",
+        enhanced: "Warning. Flashing signal. Proceed with caution.",
+      },
+      unknown: {
+        standard: "",
+        enhanced: "",
+      },
+    };
 
   return needsPositionCues
     ? messages[state].enhanced
@@ -131,23 +132,23 @@ export const getSignalMessage = (
  */
 export const getColorblindAdjustments = (type: ColorblindnessType) => {
   switch (type) {
-    case 'protanopia':
-    case 'deuteranopia':
+    case "protanopia":
+    case "deuteranopia":
       // For red-green colorblindness: use patterns/shapes in addition to color
       return {
         usePatterns: true,
-        redColor: '#FF6B6B',      // Warmer red
-        greenColor: '#4ECDC4',    // More blue-green (teal)
+        redColor: "#FF6B6B", // Warmer red
+        greenColor: "#4ECDC4", // More blue-green (teal)
         showPositionIndicator: true,
       };
-    case 'tritanopia':
+    case "tritanopia":
       // For blue-yellow colorblindness: adjust yellow
       return {
         usePatterns: true,
-        yellowColor: '#FFA500',   // More orange
+        yellowColor: "#FFA500", // More orange
         showPositionIndicator: true,
       };
-    case 'low_vision':
+    case "low_vision":
       return {
         usePatterns: true,
         showPositionIndicator: true,
