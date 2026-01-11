@@ -28,12 +28,11 @@ import {
   ColorblindnessType,
 } from "../constants/accessibility";
 import { detectSignal, DetectionResponse, DetectedObject, TransportMode } from "../services/api";
-import { speakSignalState, resetSpeechState, speakWithElevenLabs, speak, speakAlert, stopSpeaking, speakProximityAlert, speakSceneDescription } from "../services/speech";
+import { speakSignalState, resetSpeechState, speak, speakAlert, stopSpeaking, speakProximityAlert, speakSceneDescription } from "../services/speech";
 import { useAppStore, ColorBlindnessType } from "../store/useAppStore";
 import { BoundingBoxOverlay } from "./BoundingBoxOverlay";
 import { getColorProfile, DETECTABLE_OBJECTS, DetectableObject } from "../constants/colorProfiles";
 import { parseVoiceCommand, executeVoiceCommand, VoiceCommand } from "../services/voiceCommands";
-import { analyzeScene, askQuestion, getGreeting, SceneAnalysis } from "../services/aiAssistant";
 import { updateMotionTracking, TrackedObject, resetMotionTracking } from "../services/motionTracking";
 import { screenRecorder } from "../services/screenRecorder";
 
@@ -149,60 +148,6 @@ export const CameraViewComponent = forwardRef<CameraViewHandle, Props>(function 
       pulseAnim.setValue(1);
     }
   }, [isListening, pulseAnim]);
-
-  // Handle AI assistant button press
-  const handleAskAssistant = useCallback(async () => {
-    if (!lastFrameBase64) {
-      speak("I need to see something first. Please point the camera at what you want me to describe.");
-      return;
-    }
-
-    setAiResponse(null);
-    speak("Let me take a look...");
-
-    try {
-      const analysis = await analyzeScene(
-        lastFrameBase64,
-        colorblindType as ColorblindnessType,
-        {
-          transportMode: transportSettings.currentMode,
-        }
-      );
-
-      // Build response message
-      let response = analysis.description;
-
-      // Add traffic signal info if present
-      if (analysis.trafficSignals.length > 0) {
-        response += ` Traffic signal: ${analysis.trafficSignals.join(', ')}.`;
-      }
-
-      // Add hazard warnings
-      if (analysis.hazards.length > 0) {
-        response += ` Caution: ${analysis.hazards.join(', ')}.`;
-      }
-
-      // Add color warnings for colorblind users
-      if (analysis.colorWarnings.length > 0 && colorblindType !== 'normal') {
-        response += ` Note: ${analysis.colorWarnings.join('. ')}.`;
-      }
-
-      // Add suggested action
-      response += ` ${analysis.suggestedAction}`;
-
-      setAiResponse(response);
-
-      // Use ElevenLabs for AI responses if enabled
-      if (colorProfile.useElevenLabs) {
-        await speakWithElevenLabs(response);
-      } else {
-        speak(response);
-      }
-    } catch (error) {
-      console.error("AI analysis error:", error);
-      speak("Sorry, I couldn't analyze the scene. Please try again.");
-    }
-  }, [lastFrameBase64, colorblindType, transportSettings.currentMode, colorProfile.useElevenLabs]);
 
   // Handle quick check signal
   const handleQuickCheck = useCallback(() => {
@@ -755,17 +700,6 @@ export const CameraViewComponent = forwardRef<CameraViewHandle, Props>(function 
             <Text style={styles.sceneDescriptionText}>Describe Scene</Text>
           </Pressable>
         )}
-
-        {/* AI Assistant button */}
-        <Pressable
-          style={styles.aiAssistantButton}
-          onPress={handleAskAssistant}
-          accessibilityRole="button"
-          accessibilityLabel="Ask AI assistant"
-        >
-          <Text style={styles.aiAssistantIcon}>🤖</Text>
-          <Text style={styles.aiAssistantText}>Ask AI</Text>
-        </Pressable>
       </ExpoCameraView>
 
       {/* Lock-on status indicator */}
@@ -1004,13 +938,5 @@ const styles = StyleSheet.create({
     gap: 8,
     borderWidth: 2,
     borderColor: "rgba(255, 255, 255, 0.3)",
-  },
-  aiAssistantIcon: {
-    fontSize: 18,
-  },
-  aiAssistantText: {
-    color: "#fff",
-    fontSize: 14,
-    fontWeight: "600",
   },
 });

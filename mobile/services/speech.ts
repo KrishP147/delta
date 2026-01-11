@@ -164,8 +164,11 @@ export async function speakWithElevenLabs(
   try {
     // Stop any currently playing audio
     if (soundObject) {
-      await soundObject.stopAsync();
-      await soundObject.unloadAsync();
+      const status = await soundObject.getStatusAsync();
+      if (status.isLoaded) {
+        await soundObject.stopAsync();
+        await soundObject.unloadAsync();
+      }
       soundObject = null;
     }
 
@@ -181,7 +184,7 @@ export async function speakWithElevenLabs(
         },
         body: JSON.stringify({
           text: message,
-          model_id: "eleven_monolingual_v1",
+          model_id: "eleven_turbo_v2_5", // Free tier model
           voice_settings: {
             stability: state === "red" ? 0.7 : 0.5,
             similarity_boost: state === "red" ? 0.8 : 0.75,
@@ -191,32 +194,38 @@ export async function speakWithElevenLabs(
     );
 
     if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[ElevenLabs] API error:', response.status, errorText);
       throw new Error(`ElevenLabs API error: ${response.status}`);
     }
 
-    // Get audio data as base64
-    const audioBlob = await response.blob();
-    const reader = new FileReader();
+    // Get audio data as array buffer then convert to base64
+    const audioArrayBuffer = await response.arrayBuffer();
+    const bytes = new Uint8Array(audioArrayBuffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const audioBase64 = btoa(binary);
     
-    reader.onloadend = async () => {
-      const base64Audio = reader.result as string;
-      
-      // Create and play sound
-      const { sound } = await Audio.Sound.createAsync(
-        { uri: base64Audio },
-        { shouldPlay: true, volume: 1.0 },
-        (status) => {
-          if (status.isLoaded && status.didJustFinish) {
-            sound.unloadAsync();
-          }
-        }
-      );
-      
-      soundObject = sound;
-      console.log('[ElevenLabs] Playing natural voice audio');
-    };
+    // Create and play sound
+    const { sound } = await Audio.Sound.createAsync(
+      { uri: `data:audio/mpeg;base64,${audioBase64}` },
+      { shouldPlay: true, volume: 1.0 }
+    );
     
-    reader.readAsDataURL(audioBlob);
+    soundObject = sound;
+    console.log('[ElevenLabs] Playing natural voice audio');
+    
+    // Unload when finished
+    sound.setOnPlaybackStatusUpdate((status) => {
+      if (status.isLoaded && status.didJustFinish) {
+        sound.unloadAsync();
+        soundObject = null;
+        sound.unloadAsync();
+        soundObject = null;
+      }
+    });
   } catch (error) {
     console.error("ElevenLabs error, falling back to Expo Speech:", error);
     speakWithExpo(message, state);
@@ -381,21 +390,13 @@ export async function stopSpeaking(): Promise<void> {
   
   // Stop ElevenLabs audio if playing
   if (soundObject) {
-    try {
+    const status = await soundObject.getStatusAsync();
+    if (status.isLoaded) {
       await soundObject.stopAsync();
       await soundObject.unloadAsync();
-      soundObject = null;
-    } catch (error) {
-      console.error('Error stopping ElevenLabs audio:', error);
     }
+    soundObject = null;
   }
-}
-
-/**
- * Checks if TTS is currently speaking
- */
-export async function isSpeaking(): Promise<boolean> {
-  return await Speech.isSpeakingAsync();
 }
 
 /**

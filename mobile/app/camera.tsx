@@ -65,12 +65,19 @@ export default function CameraScreen() {
   }, []);
 
   const checkBackendConnection = async () => {
-    const health = await checkDetectionHealth();
-    // Connected if Python service works (directly or via backend)
-    const anyHealthy = health.backend || health.python;
-    setIsConnected(anyHealthy);
-    if (!anyHealthy) {
-      setError(`Python detection service unavailable - start with: cd python-detection && start.bat`);
+    try {
+      const health = await checkDetectionHealth();
+      // Connected if Python service works (directly or via backend)
+      const anyHealthy = health.backend || health.python;
+      setIsConnected(anyHealthy);
+      if (!anyHealthy) {
+        console.log('[Camera] Backend offline - detection will be disabled');
+        setError(`Python detection service unavailable. Start backend to enable detection.`);
+      }
+    } catch (error) {
+      console.log('[Camera] Backend check failed:', error);
+      setIsConnected(false);
+      setError(`Backend offline. Start services to enable detection.`);
     }
   };
 

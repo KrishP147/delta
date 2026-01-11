@@ -15,8 +15,8 @@ import { getColorProfile } from '../constants/colorProfiles';
 
 // Gemini API configuration
 const GEMINI_API_KEY = process.env.EXPO_PUBLIC_GEMINI_API_KEY || '';
-// Updated to use Gemini 2.5 Flash model
-const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent';
+// Use Gemini 2.5 Flash (stable version)
+const GEMINI_API_URL = 'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent';
 
 export interface SceneAnalysis {
   description: string;
@@ -91,7 +91,9 @@ Be concise and focus on safety-relevant information. Speak as if directly talkin
     });
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      console.error('[Gemini] Scene analysis API error:', response.status, errorData);
+      throw new Error(`Gemini API error: ${response.status} - ${errorData.error?.message || 'Unknown'}`);
     }
 
     const data = await response.json();
@@ -159,7 +161,9 @@ Keep responses brief (1-3 sentences) and actionable.`;
     });
 
     if (!response.ok) {
-      throw new Error(`Gemini API error: ${response.status}`);
+      const errorData = await response.json().catch(() => ({ error: { message: 'Unknown error' } }));
+      console.error('[Gemini] Question API error:', response.status, errorData);
+      throw new Error(`Gemini API error: ${response.status} - ${errorData.error?.message || 'Unknown'}`);
     }
 
     const data = await response.json();
