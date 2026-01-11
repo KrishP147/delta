@@ -150,7 +150,7 @@ export default function ColorTestScreen() {
               the number you see, or "Can't see" if no number is visible.
             </Text>
             <Text style={styles.infoText}>
-              This is not a medical diagnosis - it helps personalize your Delta
+              This is not a medical diagnosis - it helps personalize your TrueLight
               experience.
             </Text>
           </View>

@@ -75,20 +75,27 @@ export interface DetectionResponse {
   alertObjects?: DetectedObject[];    // Only objects that need voice alerts
 }
 
+// Transport mode type
+export type TransportMode = 'walking' | 'biking' | 'driving' | 'passenger';
+
 /**
  * Main detection function - detects all objects, alerts only for problematic colors
+ * Detection sensitivity adapts based on transport mode:
+ * - Walking: More sensitive, detects smaller objects (user has more time)
+ * - Driving: Less sensitive, focuses on road-relevant objects (faster reaction needed)
  */
 export async function detectSignal(
   base64Image: string,
-  colorblindType: ColorblindnessType = 'unknown'
+  colorblindType: ColorblindnessType = 'unknown',
+  transportMode: TransportMode = 'driving'
 ): Promise<DetectionResponse> {
-  console.log(`[Detection] Starting detection for ${colorblindType} user`);
+  console.log(`[Detection] Starting detection for ${colorblindType} user in ${transportMode} mode`);
 
   // Try Python service methods - NO Roboflow fallback
   // Python service provides accurate color analysis essential for colorblind users
   const methods = [
-    { name: 'Backend Proxy', fn: () => detectViaBackend(base64Image, colorblindType) },
-    { name: 'Direct Python', fn: () => detectWithPython(base64Image, colorblindType) },
+    { name: 'Backend Proxy', fn: () => detectViaBackend(base64Image, colorblindType, transportMode) },
+    { name: 'Direct Python', fn: () => detectWithPython(base64Image, colorblindType, transportMode) },
   ];
 
   for (const method of methods) {
@@ -122,7 +129,8 @@ export async function detectSignal(
  */
 async function detectViaBackend(
   base64Image: string,
-  colorblindType: ColorblindnessType
+  colorblindType: ColorblindnessType,
+  transportMode: TransportMode = 'driving'
 ): Promise<DetectionResponse> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), DETECTION_TIMEOUT);
@@ -138,6 +146,7 @@ async function detectViaBackend(
       body: JSON.stringify({
         image: base64Image,
         colorblindness_type: colorblindType,
+        transport_mode: transportMode,
         min_confidence: 0.5,
       }),
       signal: controller.signal,
@@ -163,7 +172,8 @@ async function detectViaBackend(
  */
 async function detectWithPython(
   base64Image: string,
-  colorblindType: ColorblindnessType
+  colorblindType: ColorblindnessType,
+  transportMode: TransportMode = 'driving'
 ): Promise<DetectionResponse> {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), DETECTION_TIMEOUT);
@@ -175,6 +185,7 @@ async function detectWithPython(
       body: JSON.stringify({
         image: base64Image,
         colorblindness_type: colorblindType,
+        transport_mode: transportMode,
         min_confidence: 0.5,
       }),
       signal: controller.signal,

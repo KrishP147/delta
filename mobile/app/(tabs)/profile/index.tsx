@@ -51,7 +51,7 @@ export default function ProfileScreen() {
         <View style={styles.header}>
           <Text style={styles.title}>Your Profile</Text>
           <Text style={styles.subtitle}>
-            Customize Delta for your vision needs
+            Customize TrueLight for your vision needs
           </Text>
         </View>
 
@@ -186,7 +186,7 @@ export default function ProfileScreen() {
         {/* Info */}
         <View style={styles.infoSection}>
           <Text style={styles.infoText}>
-            Delta uses your color vision profile to provide targeted alerts for
+            TrueLight uses your color vision profile to provide targeted alerts for
             objects and signals you may have difficulty seeing.
           </Text>
         </View>

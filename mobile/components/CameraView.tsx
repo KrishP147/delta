@@ -13,7 +13,7 @@
  * - Motion tracking for moving objects (animated brackets)
  */
 
-import React, { useRef, useState, useEffect, useCallback } from "react";
+import React, { useRef, useState, useEffect, useCallback, useImperativeHandle, forwardRef } from "react";
 import { View, Text, StyleSheet, Pressable, Dimensions, Alert, Animated } from "react-native";
 import {
   CameraView as ExpoCameraView,
@@ -27,14 +27,22 @@ import {
   getSignalMessage,
   ColorblindnessType,
 } from "../constants/accessibility";
-import { detectSignal, DetectionResponse, DetectedObject } from "../services/api";
-import { speakSignalState, resetSpeechState, speakWithElevenLabs, speak, stopSpeaking } from "../services/speech";
+import { detectSignal, DetectionResponse, DetectedObject, TransportMode } from "../services/api";
+import { speakSignalState, resetSpeechState, speakWithElevenLabs, speak, speakAlert, stopSpeaking, speakProximityAlert, speakSceneDescription } from "../services/speech";
 import { useAppStore, ColorBlindnessType } from "../store/useAppStore";
 import { BoundingBoxOverlay } from "./BoundingBoxOverlay";
 import { getColorProfile, DETECTABLE_OBJECTS, DetectableObject } from "../constants/colorProfiles";
 import { parseVoiceCommand, executeVoiceCommand, VoiceCommand } from "../services/voiceCommands";
 import { analyzeScene, askQuestion, getGreeting, SceneAnalysis } from "../services/aiAssistant";
 import { updateMotionTracking, TrackedObject, resetMotionTracking } from "../services/motionTracking";
+import { screenRecorder } from "../services/screenRecorder";
+
+// Export handle type for parent components to control recording
+export interface CameraViewHandle {
+  startRecording: () => Promise<boolean>;
+  stopRecording: () => Promise<void>;
+  isRecording: () => boolean;
+}
 
 interface Props {
   colorblindType: ColorBlindnessType;
@@ -42,11 +50,11 @@ interface Props {
   onDetection?: (state: SignalState, confidence: number) => void;
 }
 
-export function CameraViewComponent({
+export const CameraViewComponent = forwardRef<CameraViewHandle, Props>(function CameraViewComponent({
   colorblindType,
   onError,
   onDetection,
-}: Props) {
+}, ref) {
   const cameraRef = useRef<ExpoCameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
   const [currentState, setCurrentState] = useState<SignalState>("unknown");
@@ -58,9 +66,40 @@ export function CameraViewComponent({
   const [aiResponse, setAiResponse] = useState<string | null>(null);
   const [lastFrameBase64, setLastFrameBase64] = useState<string | null>(null);
   const [imageDimensions, setImageDimensions] = useState({ width: 640, height: 480 });
+  const [isRecordingVideo, setIsRecordingVideo] = useState(false);
+  const [recordingDuration, setRecordingDuration] = useState(0);
   const pulseAnim = useRef(new Animated.Value(1)).current;
   const captureIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const frameNumberRef = useRef(0); // Track frame number for motion detection
+  const recordingTimerRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Expose recording controls to parent components
+  useImperativeHandle(ref, () => ({
+    startRecording: async () => {
+      if (!cameraRef.current || isRecordingVideo) return false;
+      const success = await screenRecorder.startRecording(cameraRef.current);
+      if (success) {
+        setIsRecordingVideo(true);
+        setRecordingDuration(0);
+        // Start duration timer
+        recordingTimerRef.current = setInterval(() => {
+          setRecordingDuration(prev => prev + 1);
+        }, 1000);
+      }
+      return success;
+    },
+    stopRecording: async () => {
+      if (!isRecordingVideo) return;
+      await screenRecorder.stopRecording();
+      setIsRecordingVideo(false);
+      setRecordingDuration(0);
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+        recordingTimerRef.current = null;
+      }
+    },
+    isRecording: () => isRecordingVideo,
+  }));
 
   // Get screen dimensions for bounding box calculations
   const screenDimensions = Dimensions.get("window");
@@ -75,6 +114,10 @@ export function CameraViewComponent({
   useEffect(() => {
     return () => {
       resetMotionTracking();
+      // Cleanup recording timer
+      if (recordingTimerRef.current) {
+        clearInterval(recordingTimerRef.current);
+      }
     };
   }, [colorblindType]);
 
@@ -178,6 +221,57 @@ export function CameraViewComponent({
     }
   }, [currentState, colorProfile.useElevenLabs]);
 
+  // Handle scene description for low vision users
+  const handleSceneDescription = useCallback(async () => {
+    if (detectedObjects.length === 0) {
+      speak("No objects detected. Point the camera at your surroundings.");
+      return;
+    }
+
+    // Prepare objects for scene description
+    const objectsForDescription = detectedObjects.slice(0, 3).map(obj => {
+      const frameArea = imageDimensions.width * imageDimensions.height;
+      const bboxArea = obj.bbox.width * obj.bbox.height;
+      const relativeSize = bboxArea / frameArea;
+      
+      let size: "large" | "medium" | "small";
+      if (relativeSize > 0.05) {
+        size = "large";
+      } else if (relativeSize > 0.02) {
+        size = "medium";
+      } else {
+        size = "small";
+      }
+
+      const centerX = obj.bbox.x + obj.bbox.width / 2;
+      const frameWidth = imageDimensions.width;
+      let location: "left" | "center" | "right";
+      
+      if (centerX < frameWidth * 0.3) {
+        location = "left";
+      } else if (centerX > frameWidth * 0.7) {
+        location = "right";
+      } else {
+        location = "center";
+      }
+
+      return {
+        label: obj.label,
+        size,
+        location
+      };
+    });
+
+    console.log('[CameraView] 🔊 Scene description:', objectsForDescription);
+    
+    try {
+      await speakSceneDescription(objectsForDescription);
+    } catch (e) {
+      console.warn("Scene description failed:", e);
+      speak("Unable to describe the scene at this time.");
+    }
+  }, [detectedObjects, imageDimensions]);
+
   // Capture and analyze a frame
   const captureFrame = useCallback(async () => {
     if (!cameraRef.current || isProcessing) return;
@@ -203,11 +297,12 @@ export function CameraViewComponent({
       // Save frame for AI assistant
       setLastFrameBase64(photo.base64);
 
-      // Send to backend for analysis with colorblind type for enhanced detection
+      // Send to backend for analysis with colorblind type and transport mode for enhanced detection
       console.log('[CameraView] 🔍 Sending to detection service...');
       const result: DetectionResponse = await detectSignal(
         photo.base64,
-        colorblindType as ColorblindnessType
+        colorblindType as ColorblindnessType,
+        transportSettings.currentMode as TransportMode
       );
 
       console.log(`[CameraView] ✓ Detection result: ${result.detectedObjects?.length || 0} objects, state: ${result.state}`);
@@ -232,23 +327,79 @@ export function CameraViewComponent({
         const trackedObjects = updateMotionTracking(result.detectedObjects, frameNumberRef.current);
         setDetectedObjects(trackedObjects);
 
-        // VOICE ALERTS: Only speak for objects with problematic colors
-        // This is the ONLY place voice alerts should trigger in the app
-        const problematicObjects = result.detectedObjects.filter(
-          obj => obj.isProblematicColor && obj.alertPriority !== 'none'
-        );
+        // Update recording stats if recording
+        if (isRecordingVideo) {
+          screenRecorder.updateDetectionStats(result.detectedObjects);
+        }
 
-        if (problematicObjects.length > 0 && result.confidence >= alertSettings.minConfidenceToAlert) {
-          // Generate alert message for problematic colors
-          const alertMessage = generateColorAlert(problematicObjects);
+        // VOICE ALERTS: Different behavior for low_vision vs color-based modes
+        if (colorblindType === 'low_vision') {
+          // LOW VISION MODE: Proximity-based alerts (size = closeness)
+          const frameArea = (result.imageWidth || imageDimensions.width) * (result.imageHeight || imageDimensions.height);
+          
+          for (const obj of result.detectedObjects) {
+            const bboxArea = obj.bbox.width * obj.bbox.height;
+            const relativeSize = bboxArea / frameArea;
+            
+            // Determine distance category based on object size
+            let distance: "very close" | "close" | "moderate" | "far" | null = null;
+            
+            if (relativeSize > 0.10) {
+              distance = "very close"; // >10% of frame = very close
+            } else if (relativeSize > 0.05) {
+              distance = "close"; // >5% = close
+            } else if (relativeSize > 0.02) {
+              distance = "moderate"; // >2% = moderate distance
+            } else if (relativeSize > 0.005) {
+              distance = "far"; // >0.5% = far but notable
+            }
+            
+            // Only alert for objects that are close enough to matter
+            if (distance && (distance === "very close" || distance === "close" || obj.alertPriority === "critical")) {
+              // Determine direction from bbox position
+              const centerX = obj.bbox.x + obj.bbox.width / 2;
+              const frameWidth = result.imageWidth || imageDimensions.width;
+              let direction: string | undefined;
+              
+              if (centerX < frameWidth * 0.3) {
+                direction = "left";
+              } else if (centerX > frameWidth * 0.7) {
+                direction = "right";
+              } else {
+                direction = "ahead";
+              }
+              
+              console.log(`[CameraView] 🔊 Low vision alert: ${obj.label} ${distance} ${direction} (${(relativeSize * 100).toFixed(1)}% of frame)`);
+              
+              try {
+                await speakProximityAlert(obj.label, distance, direction);
+              } catch (e) {
+                console.warn("Proximity alert failed:", e);
+              }
+              
+              // Only alert the most urgent object to avoid spam
+              break;
+            }
+          }
+        } else {
+          // STANDARD MODE: Color-based alerts for problematic colors
+          // This is the ONLY place color voice alerts should trigger in the app
+          const problematicObjects = result.detectedObjects.filter(
+            obj => obj.isProblematicColor && obj.alertPriority !== 'none'
+          );
 
-          try {
-            // Use ElevenLabs for more natural voice
-            await speakWithElevenLabs(alertMessage);
-          } catch (e) {
-            // Fallback to regular speech
-            console.warn("ElevenLabs failed, using fallback:", e);
-            speak(alertMessage);
+          if (problematicObjects.length > 0 && result.confidence >= alertSettings.minConfidenceToAlert) {
+            // Generate alert message for problematic colors
+            const alertMessage = generateColorAlert(problematicObjects);
+
+            try {
+              // Use ElevenLabs for more natural voice
+              await speakWithElevenLabs(alertMessage);
+            } catch (e) {
+              // Fallback to alert speech (always plays, ignores alertsOnlyMode)
+              console.warn("ElevenLabs failed, using fallback:", e);
+              speakAlert(alertMessage);
+            }
           }
         }
       } else {
@@ -457,7 +608,7 @@ export function CameraViewComponent({
     return (
       <View style={styles.container}>
         <Text style={styles.message}>
-          Delta needs camera access to detect traffic signals and help keep you
+          TrueLight needs camera access to detect traffic signals and help keep you
           safe.
         </Text>
         <Pressable
@@ -492,6 +643,8 @@ export function CameraViewComponent({
           containerWidth={screenDimensions.width}
           containerHeight={screenDimensions.height}
           activeTargetIndex={activeTargetIndex}
+          colorblindType={colorblindType as ColorblindnessType}
+          transportMode={transportSettings.currentMode}
         />
 
         {/* Minimal HUD overlay - only show when signal detected */}
@@ -514,6 +667,17 @@ export function CameraViewComponent({
             <View
               style={[styles.processingDot, { backgroundColor: COLORS.accent }]}
             />
+          </View>
+        )}
+
+        {/* Recording indicator with timer */}
+        {isRecordingVideo && (
+          <View style={styles.recordingOverlay}>
+            <View style={styles.recordingDotLarge} />
+            <Text style={styles.recordingTimer}>
+              {Math.floor(recordingDuration / 60).toString().padStart(2, '0')}:
+              {(recordingDuration % 60).toString().padStart(2, '0')}
+            </Text>
           </View>
         )}
 
@@ -553,6 +717,19 @@ export function CameraViewComponent({
             </Pressable>
           </View>
         )}
+
+        {/* Low vision scene description button */}
+        {colorblindType === 'low_vision' && detectedObjects.length > 0 && (
+          <Pressable
+            style={styles.sceneDescriptionButton}
+            onPress={handleSceneDescription}
+            accessibilityRole="button"
+            accessibilityLabel="Describe scene"
+          >
+            <Text style={styles.sceneDescriptionIcon}>🔊</Text>
+            <Text style={styles.sceneDescriptionText}>Describe Scene</Text>
+          </Pressable>
+        )}
       </ExpoCameraView>
 
       {/* Lock-on status indicator */}
@@ -567,7 +744,7 @@ export function CameraViewComponent({
       </View>
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   container: {
@@ -731,5 +908,51 @@ const styles = StyleSheet.create({
   dismissButtonText: {
     color: COLORS.textSecondary,
     fontSize: 16,
+  },
+  recordingOverlay: {
+    position: "absolute",
+    top: 20,
+    left: 20,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "rgba(255, 59, 48, 0.9)",
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    gap: 8,
+  },
+  recordingDotLarge: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: "#fff",
+  },
+  recordingTimer: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+    fontFamily: "monospace",
+  },
+  sceneDescriptionButton: {
+    position: "absolute",
+    bottom: 120,
+    right: 20,
+    backgroundColor: "rgba(99, 102, 241, 0.9)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 8,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    borderWidth: 2,
+    borderColor: "rgba(255, 255, 255, 0.3)",
+  },
+  sceneDescriptionIcon: {
+    fontSize: 18,
+  },
+  sceneDescriptionText: {
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "600",
   },
 });

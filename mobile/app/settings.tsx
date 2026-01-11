@@ -1,7 +1,7 @@
 /**
  * Settings Screen
  *
- * Allows users to customize ColorGuard behavior including:
+ * Allows users to customize TrueLight behavior including:
  * - Audio settings
  * - Warning sensitivity
  * - Transit mode preferences
@@ -253,7 +253,7 @@ export default function SettingsScreen() {
           <Text style={styles.sectionTitle}>About</Text>
           
           <View style={styles.aboutCard}>
-            <Text style={styles.aboutTitle}>ColorGuard / Delta</Text>
+            <Text style={styles.aboutTitle}>TrueLight</Text>
             <Text style={styles.aboutVersion}>Version 1.0.0</Text>
             <Text style={styles.aboutDescription}>
               AI-powered hazard detection system for colorblind users.

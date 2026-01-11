@@ -7,6 +7,12 @@
  * ACCESSIBILITY DECISION:
  * - Expo Speech is the default (reliable, works offline)
  * - ElevenLabs can be enabled for more natural voice (requires internet)
+ *
+ * AUDIO POLICY:
+ * - By default, only urgent color alerts trigger audio (alertsOnlyAudio = true)
+ * - Navigation/UI feedback is silent unless alertsOnlyAudio is disabled
+ * - Use speakAlert() for urgent color alerts (always plays)
+ * - Use speak() for general feedback (respects alertsOnlyAudio setting)
  */
 
 import * as Speech from "expo-speech";
@@ -20,6 +26,25 @@ import {
 // State for debouncing
 let lastSpokenState: SignalState | null = null;
 let lastSpokenTime = 0;
+
+// Audio mode: if true, only urgent alerts will trigger audio
+let alertsOnlyMode = true;
+
+/**
+ * Set the alerts-only audio mode
+ * When true, only speakAlert() will produce audio
+ * When false, speak() will also produce audio
+ */
+export function setAlertsOnlyMode(enabled: boolean): void {
+  alertsOnlyMode = enabled;
+}
+
+/**
+ * Check if alerts-only mode is enabled
+ */
+export function isAlertsOnlyMode(): boolean {
+  return alertsOnlyMode;
+}
 
 // ElevenLabs configuration
 interface ElevenLabsConfig {
@@ -161,9 +186,33 @@ export async function speakWithElevenLabs(
 }
 
 /**
- * Speaks a custom message
+ * Speaks a custom message (respects alertsOnlyMode)
+ * Use this for general navigation/UI feedback
+ * Will be silent if alertsOnlyMode is enabled
  */
 export async function speak(
+  message: string,
+  options?: { rate?: number; pitch?: number }
+): Promise<void> {
+  // Skip if alerts-only mode is enabled (no navigation audio)
+  if (alertsOnlyMode) {
+    console.log('[Speech] Skipped (alerts-only mode):', message);
+    return;
+  }
+
+  await Speech.stop();
+  Speech.speak(message, {
+    language: "en-US",
+    pitch: options?.pitch ?? 1.0,
+    rate: options?.rate ?? 1.0,
+  });
+}
+
+/**
+ * Speaks an urgent alert (always plays, ignores alertsOnlyMode)
+ * Use this for color-related safety alerts only
+ */
+export async function speakAlert(
   message: string,
   options?: { rate?: number; pitch?: number }
 ): Promise<void> {
@@ -208,6 +257,80 @@ export async function speakHazardAlert(
     language: "en-US",
     pitch,
     rate,
+  });
+}
+
+/**
+ * Speaks proximity/urgency alerts for low vision users
+ * Prioritizes by closeness and movement potential
+ */
+export async function speakProximityAlert(
+  objectLabel: string,
+  distance: "very close" | "close" | "moderate" | "far",
+  direction?: "ahead" | "left" | "right" | "center"
+): Promise<void> {
+  let message = "";
+  let pitch = 1.0;
+  let rate = 1.0;
+
+  switch (distance) {
+    case "very close":
+      message = `Warning! ${objectLabel} very close`;
+      if (direction) message += ` ${direction}`;
+      pitch = 1.2;
+      rate = 1.4; // Very fast and urgent
+      break;
+    case "close":
+      message = `${objectLabel} approaching`;
+      if (direction) message += ` on ${direction}`;
+      pitch = 1.1;
+      rate = 1.2;
+      break;
+    case "moderate":
+      message = `${objectLabel} ${direction || "ahead"}`;
+      rate = 1.1;
+      break;
+    case "far":
+      message = `${objectLabel} in distance`;
+      if (direction) message += ` ${direction}`;
+      rate = 1.0;
+      break;
+  }
+
+  await Speech.stop();
+  Speech.speak(message, {
+    language: "en-US",
+    pitch,
+    rate,
+  });
+}
+
+/**
+ * Provides detailed scene description for low vision users
+ * More verbose than standard alerts
+ */
+export async function speakSceneDescription(
+  objects: Array<{ label: string; size: string; location: string }>
+): Promise<void> {
+  if (objects.length === 0) {
+    await speak("No objects detected");
+    return;
+  }
+
+  let message = `${objects.length} object${objects.length > 1 ? 's' : ''} detected. `;
+  
+  // Describe top 3 most important objects
+  const topObjects = objects.slice(0, 3);
+  topObjects.forEach((obj, index) => {
+    if (index > 0) message += ". ";
+    message += `${obj.size} ${obj.label} ${obj.location}`;
+  });
+
+  await Speech.stop();
+  Speech.speak(message, {
+    language: "en-US",
+    pitch: 1.0,
+    rate: 1.0,
   });
 }
 

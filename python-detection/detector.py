@@ -239,26 +239,39 @@ class ObjectDetector:
         """
         Detect significant color regions in the frame as fallback when YOLO finds nothing.
         This ensures we always have something to show bounding boxes on.
-        
+
         Args:
             frame: BGR image
             min_area: Minimum area for a region to be considered
-            
+
         Returns:
             List of detected color regions with bounding boxes
         """
         height, width = frame.shape[:2]
         hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-        
-        # Color ranges to detect
+
+        # Expanded color ranges to detect (including browns, violets, etc.)
         color_ranges = {
             "red": [((0, 70, 50), (10, 255, 255)), ((170, 70, 50), (180, 255, 255))],
-            "orange": [((10, 100, 100), (25, 255, 255))],
+            "dark red": [((0, 70, 30), (10, 255, 80)), ((160, 70, 30), (180, 255, 80))],
+            "orange": [((10, 100, 100), (20, 255, 255))],
+            "rust": [((10, 70, 70), (20, 200, 150))],
+            "brown": [((10, 40, 40), (25, 180, 150))],
+            "tan": [((15, 25, 140), (30, 90, 220))],
             "yellow": [((25, 100, 100), (35, 255, 255))],
+            "gold": [((20, 70, 100), (30, 200, 200))],
             "green": [((35, 70, 50), (85, 255, 255))],
-            "blue": [((85, 70, 50), (130, 255, 255))],
-            "purple": [((130, 70, 50), (160, 255, 255))],
-            "pink": [((160, 70, 50), (170, 255, 255))],
+            "olive": [((30, 25, 40), (50, 140, 140))],
+            "teal": [((80, 70, 70), (95, 255, 200))],
+            "cyan": [((85, 100, 100), (100, 255, 255))],
+            "blue": [((100, 70, 50), (130, 255, 255))],
+            "navy": [((100, 70, 30), (130, 255, 100))],
+            "purple": [((130, 70, 50), (145, 255, 255))],
+            "violet": [((145, 60, 60), (160, 255, 255))],
+            "magenta": [((150, 70, 100), (165, 255, 255))],
+            "lavender": [((130, 25, 140), (155, 90, 255))],
+            "pink": [((160, 40, 140), (175, 180, 255))],
+            "hot pink": [((165, 100, 140), (175, 255, 255))],
         }
         
         detections = []

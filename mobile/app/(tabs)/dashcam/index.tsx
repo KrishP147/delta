@@ -20,7 +20,7 @@ import {
 import { SafeAreaView } from "react-native-safe-area-context";
 import * as ScreenOrientation from "expo-screen-orientation";
 import { COLORS, SIZES, SignalState } from "../../../constants/accessibility";
-import { CameraViewComponent } from "../../../components/CameraView";
+import { CameraViewComponent, CameraViewHandle } from "../../../components/CameraView";
 import {
   useAppStore,
   getTransportModeFromSpeed,
@@ -53,6 +53,7 @@ export default function DashcamScreen() {
   const [isLandscape, setIsLandscape] = useState(false);
 
   const speedDetectorRef = useRef<SpeedDetector | null>(null);
+  const cameraViewRef = useRef<CameraViewHandle>(null);
 
   // Initialize speed detector
   useEffect(() => {
@@ -136,9 +137,26 @@ export default function DashcamScreen() {
     []
   );
 
-  const toggleRecording = () => {
-    setIsRecording(!isRecording);
-    speak(isRecording ? "Recording stopped" : "Recording started");
+  const toggleRecording = async () => {
+    if (isRecording) {
+      // Stop recording
+      if (cameraViewRef.current) {
+        await cameraViewRef.current.stopRecording();
+      }
+      setIsRecording(false);
+      speak("Recording stopped. Clip saved.");
+    } else {
+      // Start recording
+      if (cameraViewRef.current) {
+        const success = await cameraViewRef.current.startRecording();
+        if (success) {
+          setIsRecording(true);
+          speak("Recording started. Maximum 30 seconds.");
+        } else {
+          speak("Failed to start recording.");
+        }
+      }
+    }
   };
 
   const toggleLandscape = async () => {
@@ -217,6 +235,7 @@ export default function DashcamScreen() {
     <View style={styles.container}>
       {/* Camera feed */}
       <CameraViewComponent
+        ref={cameraViewRef}
         colorblindType={colorVisionProfile.type}
         onError={handleError}
         onDetection={handleDetection}

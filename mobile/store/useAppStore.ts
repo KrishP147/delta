@@ -53,6 +53,7 @@ export interface AlertSettings {
   voiceId: string | null; // ElevenLabs voice ID
   speechRate: number; // 0.5 - 2.0
   minConfidenceToAlert: number; // 0-1
+  alertsOnlyAudio: boolean; // If true, only play audio for urgent color alerts (not navigation/UI)
 }
 
 // Transport mode settings
@@ -128,6 +129,7 @@ const defaultAlertSettings: AlertSettings = {
   voiceId: null,
   speechRate: 1.1,
   minConfidenceToAlert: 0.5,
+  alertsOnlyAudio: true, // Default: only play audio for urgent color alerts
 };
 
 const defaultTransportSettings: TransportSettings = {
@@ -221,7 +223,7 @@ export const useAppStore = create<AppState>()(
         }),
     }),
     {
-      name: "delta-app-storage",
+      name: "truelight-app-storage",
       storage: createJSONStorage(() => AsyncStorage),
       // Only persist these fields (exclude runtime state)
       partialize: (state) => ({

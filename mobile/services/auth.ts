@@ -8,8 +8,8 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { API_BASE_URL } from './api';
 
-const TOKEN_KEY = '@delta:auth_token';
-const USER_KEY = '@delta:user';
+const TOKEN_KEY = '@truelight:auth_token';
+const USER_KEY = '@truelight:user';
 const AUTH_TIMEOUT = 10000; // 10 second timeout for auth requests
 
 export interface User {

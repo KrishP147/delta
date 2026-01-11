@@ -34,6 +34,7 @@ export async function POST(request: NextRequest) {
 
     console.log(`[Detection] Forwarding to Python service: ${PYTHON_SERVICE_URL}/detect`);
     console.log(`[Detection] Colorblindness type: ${body.colorblindness_type || 'normal'}`);
+    console.log(`[Detection] Transport mode: ${body.transport_mode || 'driving'}`);
 
     // Forward request to Python detection service
     const response = await fetch(`${PYTHON_SERVICE_URL}/detect`, {
@@ -44,6 +45,7 @@ export async function POST(request: NextRequest) {
       body: JSON.stringify({
         image: body.image,
         colorblindness_type: body.colorblindness_type || "normal",
+        transport_mode: body.transport_mode || "driving",
         min_confidence: body.min_confidence || 0.15,  // Very low threshold for maximum recall
       }),
     });

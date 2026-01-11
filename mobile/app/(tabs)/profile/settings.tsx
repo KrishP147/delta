@@ -81,7 +81,7 @@ export default function SettingsScreen() {
 
   const handleTestVoice = () => {
     speak(
-      "This is a test of the Delta voice system. Red light ahead. Stop.",
+      "This is a test of the TrueLight voice system. Red light ahead. Stop.",
       { rate: alertSettings.speechRate }
     );
   };
@@ -386,9 +386,9 @@ export default function SettingsScreen() {
           </Pressable>
         </View>
 
-        {/* Version */}}
+        {/* Version */}
         <View style={styles.footer}>
-          <Text style={styles.footerText}>Delta v1.0.0</Text>
+          <Text style={styles.footerText}>TrueLight v1.0.0</Text>
           <Text style={styles.footerText}>Your data stays on your device</Text>
         </View>
       </ScrollView>

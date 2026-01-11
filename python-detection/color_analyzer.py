@@ -27,42 +27,137 @@ class ColorBlindnessType(Enum):
 
 # HSV color ranges for detection
 # Format: (H_min, S_min, V_min), (H_max, S_max, V_max)
+# Expanded with more nuanced colors for better descriptions
 COLOR_RANGES = {
+    # Reds
     "red_low": ((0, 100, 100), (10, 255, 255)),
     "red_high": ((160, 100, 100), (180, 255, 255)),
-    "orange": ((10, 100, 100), (25, 255, 255)),
+    "dark_red": ((0, 100, 50), (10, 255, 100)),        # Maroon, burgundy
+    "dark_red_high": ((160, 100, 50), (180, 255, 100)),
+
+    # Oranges and browns
+    "orange": ((10, 100, 100), (20, 255, 255)),
+    "rust_orange": ((10, 80, 80), (20, 255, 150)),     # Rusty, burnt orange
+    "brown": ((10, 50, 50), (25, 200, 150)),           # Brown, tan
+    "dark_brown": ((10, 50, 30), (25, 200, 80)),       # Dark brown, chocolate
+    "tan": ((15, 30, 150), (30, 100, 220)),            # Beige, tan, cream
+
+    # Yellows
     "yellow": ((25, 100, 100), (35, 255, 255)),
+    "gold": ((20, 80, 100), (30, 255, 200)),           # Golden, amber
+    "pale_yellow": ((25, 40, 180), (35, 100, 255)),    # Light yellow, cream
+
+    # Greens
     "green": ((35, 100, 100), (85, 255, 255)),
+    "lime": ((35, 100, 150), (55, 255, 255)),          # Bright lime green
+    "dark_green": ((35, 100, 30), (85, 255, 100)),     # Forest green, olive
+    "olive": ((30, 30, 50), (50, 150, 150)),           # Olive, khaki
+    "teal": ((80, 80, 80), (95, 255, 200)),            # Teal, blue-green
+
+    # Blues and cyans
     "cyan": ((85, 100, 100), (100, 255, 255)),
     "blue": ((100, 100, 100), (130, 255, 255)),
-    "purple": ((130, 100, 100), (160, 255, 255)),
+    "light_blue": ((100, 50, 150), (115, 150, 255)),   # Sky blue, baby blue
+    "dark_blue": ((100, 100, 50), (130, 255, 120)),    # Navy, dark blue
+
+    # Purples and violets
+    "purple": ((130, 100, 100), (145, 255, 255)),
+    "violet": ((145, 80, 80), (160, 255, 255)),        # Violet, magenta-ish
+    "lavender": ((130, 30, 150), (155, 100, 255)),     # Lavender, light purple
+    "magenta": ((150, 100, 100), (165, 255, 255)),     # Magenta, fuchsia
+    "plum": ((140, 50, 50), (160, 150, 150)),          # Plum, dark purple
+
+    # Pinks
+    "pink": ((160, 50, 150), (175, 200, 255)),         # Pink, rose
+    "hot_pink": ((165, 100, 150), (175, 255, 255)),    # Hot pink, bright pink
+
+    # Neutrals
     "white": ((0, 0, 200), (180, 30, 255)),
+    "gray": ((0, 0, 80), (180, 30, 200)),              # Gray, silver
     "black": ((0, 0, 0), (180, 255, 50)),
 }
 
 # Which colors are problematic for each colorblindness type
 PROBLEMATIC_COLORS = {
     ColorBlindnessType.NORMAL: [],
-    ColorBlindnessType.PROTANOPIA: ["red_low", "red_high", "orange", "green"],
-    ColorBlindnessType.PROTANOMALY: ["red_low", "red_high", "orange"],
-    ColorBlindnessType.DEUTERANOPIA: ["red_low", "red_high", "green", "yellow"],
-    ColorBlindnessType.DEUTERANOMALY: ["green", "yellow"],
-    ColorBlindnessType.TRITANOPIA: ["blue", "yellow", "cyan"],
-    ColorBlindnessType.TRITANOMALY: ["blue", "yellow"],
+    ColorBlindnessType.PROTANOPIA: [
+        "red_low", "red_high", "dark_red", "dark_red_high",
+        "orange", "rust_orange", "brown", "dark_brown",
+        "green", "dark_green", "olive", "lime"
+    ],
+    ColorBlindnessType.PROTANOMALY: [
+        "red_low", "red_high", "dark_red", "dark_red_high",
+        "orange", "rust_orange", "brown"
+    ],
+    ColorBlindnessType.DEUTERANOPIA: [
+        "red_low", "red_high", "dark_red", "dark_red_high",
+        "green", "dark_green", "lime", "olive",
+        "yellow", "gold", "brown"
+    ],
+    ColorBlindnessType.DEUTERANOMALY: [
+        "green", "dark_green", "lime", "olive",
+        "yellow", "gold"
+    ],
+    ColorBlindnessType.TRITANOPIA: [
+        "blue", "light_blue", "dark_blue",
+        "yellow", "gold", "pale_yellow",
+        "cyan", "teal",
+        "violet", "purple"
+    ],
+    ColorBlindnessType.TRITANOMALY: [
+        "blue", "light_blue",
+        "yellow", "gold"
+    ],
     ColorBlindnessType.ACHROMATOPSIA: list(COLOR_RANGES.keys()),  # All colors problematic
 }
 
-# Human-readable color names
+# Human-readable color names with more descriptive labels
 COLOR_DISPLAY_NAMES = {
+    # Reds
     "red_low": "red",
     "red_high": "red",
+    "dark_red": "dark red (maroon)",
+    "dark_red_high": "dark red (burgundy)",
+
+    # Oranges and browns
     "orange": "orange",
+    "rust_orange": "rust orange",
+    "brown": "brown",
+    "dark_brown": "dark brown (chocolate)",
+    "tan": "tan (beige)",
+
+    # Yellows
     "yellow": "yellow",
+    "gold": "gold (amber)",
+    "pale_yellow": "pale yellow (cream)",
+
+    # Greens
     "green": "green",
+    "lime": "lime green",
+    "dark_green": "dark green (forest)",
+    "olive": "olive (khaki)",
+    "teal": "teal",
+
+    # Blues
     "cyan": "cyan",
     "blue": "blue",
+    "light_blue": "light blue (sky)",
+    "dark_blue": "dark blue (navy)",
+
+    # Purples and violets
     "purple": "purple",
+    "violet": "violet",
+    "lavender": "lavender",
+    "magenta": "magenta (fuchsia)",
+    "plum": "plum",
+
+    # Pinks
+    "pink": "pink",
+    "hot_pink": "hot pink",
+
+    # Neutrals
     "white": "white",
+    "gray": "gray",
     "black": "black",
 }
 

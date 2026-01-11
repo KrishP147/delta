@@ -63,6 +63,48 @@ class DetectionRequest(BaseModel):
     image: str  # Base64 encoded image
     colorblindness_type: str = "normal"  # User's colorblindness type
     min_confidence: float = 0.15  # Minimum confidence threshold (low for maximum recall)
+    transport_mode: str = "driving"  # "walking", "biking", "driving", "passenger"
+
+
+# Detection configuration based on transport mode
+# Walking: More time, lower thresholds, detect smaller objects
+# Driving: Less time, higher thresholds, focus on important objects
+# Low Vision: Maximum objects, prioritize by size/proximity not color
+TRANSPORT_MODE_CONFIG = {
+    "walking": {
+        "min_confidence": 0.08,      # Lower threshold for more detections
+        "min_area": 800,             # Detect smaller objects
+        "max_objects": 15,           # Show more objects since user has more time
+        "detect_all_coco": True,     # Include all 80 COCO classes
+    },
+    "biking": {
+        "min_confidence": 0.12,
+        "min_area": 1200,
+        "max_objects": 10,
+        "detect_all_coco": True,
+    },
+    "driving": {
+        "min_confidence": 0.15,
+        "min_area": 2000,
+        "max_objects": 8,
+        "detect_all_coco": False,    # Focus on road-relevant objects
+    },
+    "passenger": {
+        "min_confidence": 0.10,      # User has time to look around
+        "min_area": 1000,
+        "max_objects": 12,
+        "detect_all_coco": True,
+    },
+    # Special mode for low vision users - prioritize proximity/urgency over color
+    "low_vision": {
+        "min_confidence": 0.05,      # Very low threshold - detect everything possible
+        "min_area": 500,             # Detect even small objects
+        "max_objects": 20,           # Show many objects for maximum awareness
+        "detect_all_coco": True,     # All classes
+        "prioritize_by_size": True,  # Large = close = urgent
+        "enable_distance_alerts": True,  # Extra alerts for proximity
+    },
+}
 
 
 class BoundingBox(BaseModel):
@@ -180,20 +222,21 @@ async def test_detection():
 @app.post("/detect", response_model=DetectionResponse)
 async def detect_objects(request: DetectionRequest):
     """
-    Detect objects in image and analyze colors for colorblind users
+    Detect objects in image and analyze colors for colorblind users.
+    Detection sensitivity adapts based on transport mode.
     """
     import time
     start_time = time.time()
-    
+
     if detector is None:
         raise HTTPException(status_code=503, detail="Detection service not initialized")
-    
+
     try:
         # Decode image
         frame = decode_base64_image(request.image)
         frame_height, frame_width = frame.shape[:2]
         logger.info(f"Decoded frame: {frame_width}x{frame_height}")
-        
+
         # Check if frame is too small - YOLO needs reasonable size
         if frame_width < 100 or frame_height < 100:
             logger.warning(f"Frame too small: {frame_width}x{frame_height}")
@@ -205,24 +248,51 @@ async def detect_objects(request: DetectionRequest):
                 processing_time_ms=0,
                 alert_message=None
             )
-        
+
         # Parse colorblindness type
         try:
             cb_type = ColorBlindnessType(request.colorblindness_type.lower())
         except ValueError:
             cb_type = ColorBlindnessType.NORMAL
-        
-        # Run object detection with very low threshold
-        logger.info(f"Running detection with min_confidence={request.min_confidence}")
-        detections = detector.detect(frame, request.min_confidence)
+
+        # Get transport mode configuration
+        # For low_vision users, use special low_vision config regardless of transport mode
+        if cb_type == ColorBlindnessType.LOW_VISION:
+            mode_config = TRANSPORT_MODE_CONFIG.get("low_vision", TRANSPORT_MODE_CONFIG["walking"])
+            logger.info(f"Low vision mode enabled - prioritizing by proximity/urgency")
+        else:
+            transport_mode = request.transport_mode.lower()
+            mode_config = TRANSPORT_MODE_CONFIG.get(transport_mode, TRANSPORT_MODE_CONFIG["driving"])
+        logger.info(f"Mode: {cb_type.value if cb_type == ColorBlindnessType.LOW_VISION else transport_mode}, config: min_conf={mode_config['min_confidence']}, max_obj={mode_config['max_objects']}")
+
+        # Use mode-specific confidence threshold (or request override if lower)
+        effective_confidence = min(request.min_confidence, mode_config["min_confidence"])
+
+        # Run object detection with mode-specific threshold
+        logger.info(f"Running detection with min_confidence={effective_confidence}")
+        detections = detector.detect(frame, effective_confidence)
         logger.info(f"YOLO detections: {len(detections)} objects found")
-        
+
+        # Filter based on transport mode if not detecting all COCO classes
+        if not mode_config["detect_all_coco"]:
+            # Keep only road-relevant objects for driving mode
+            road_relevant = {"traffic light", "stop sign", "car", "truck", "bus", "motorcycle",
+                           "bicycle", "person", "fire hydrant", "train", "parking meter"}
+            original_count = len(detections)
+            detections = [d for d in detections if d["label"] in road_relevant or d.get("priority") in ["critical", "high"]]
+            logger.info(f"Filtered to road-relevant: {len(detections)}/{original_count} objects")
+
         # If YOLO finds nothing, use color region detection as fallback
         # This ensures we ALWAYS have something to show bounding boxes on
         if len(detections) == 0:
             logger.info("No YOLO detections, falling back to color region detection")
-            detections = detector.detect_color_regions(frame, min_area=1500)
+            detections = detector.detect_color_regions(frame, min_area=mode_config["min_area"])
             logger.info(f"Color region detections: {len(detections)} regions found")
+
+        # Limit number of objects based on transport mode
+        if len(detections) > mode_config["max_objects"]:
+            detections = detections[:mode_config["max_objects"]]
+            logger.info(f"Limited to {mode_config['max_objects']} objects for {transport_mode} mode")
         
         # Analyze colors and filter for colorblind relevance
         detected_objects = []
@@ -248,8 +318,16 @@ async def detect_objects(request: DetectionRequest):
             # Analyze colors in the detected region
             color_info = color_analyzer.analyze_region(roi, cb_type)
             
-            # Determine priority based on object type and color
-            priority = determine_priority(det["label"], color_info["is_problematic"])
+            # Determine priority based on object type, color, and for low_vision: size/proximity
+            bbox_area = w * h
+            frame_area = frame_width * frame_height
+            priority = determine_priority(
+                det["label"], 
+                color_info["is_problematic"],
+                cb_type,
+                bbox_area,
+                frame_area
+            )
             
             obj = DetectedObject(
                 label=det["label"],
@@ -287,13 +365,58 @@ async def detect_objects(request: DetectionRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-def determine_priority(label: str, is_problematic: bool) -> str:
-    """Determine alert priority based on object type and color relevance"""
+def determine_priority(label: str, is_problematic: bool, cb_type: ColorBlindnessType = None, bbox_area: int = 0, frame_area: int = 1) -> str:
+    """
+    Determine alert priority based on object type and color relevance.
+
+    For low_vision users: prioritize by proximity/urgency (size), not color.
+    Objects taking up more screen space are closer and more urgent.
+    
+    For other colorblindness types: prioritize based on color problematic-ness.
+    """
     critical_objects = ["traffic light", "stop sign", "fire", "emergency vehicle"]
-    high_objects = ["brake light", "turn signal", "yield sign", "warning sign", "cone"]
-    
+    high_objects = ["brake light", "turn signal", "yield sign", "warning sign", "cone", "car", "truck", "bus", "person"]
+    urgent_proximity = ["car", "truck", "bus", "motorcycle", "bicycle", "person"]  # Things that move and can hurt you
+
     label_lower = label.lower()
-    
+
+    # LOW VISION MODE: Prioritize by size (proximity/urgency), not color
+    if cb_type == ColorBlindnessType.LOW_VISION:
+        # Calculate relative size (how much of the frame this object takes up)
+        relative_size = bbox_area / frame_area if frame_area > 0 else 0
+
+        # Very large objects (>10% of frame) are CRITICAL - they're very close!
+        if relative_size > 0.10:
+            logger.info(f"  🔴 CRITICAL (size): {label} at {relative_size*100:.1f}% of frame")
+            return "critical"
+        
+        # Large objects (>5% of frame) are critical if they can move/collide
+        if relative_size > 0.05:
+            if any(obj in label_lower for obj in urgent_proximity):
+                logger.info(f"  🔴 CRITICAL (proximity): {label} at {relative_size*100:.1f}% of frame")
+                return "critical"
+            else:
+                logger.info(f"  🟠 HIGH (size): {label} at {relative_size*100:.1f}% of frame")
+                return "high"
+        
+        # Medium objects (2-5% of frame) are high priority
+        elif relative_size > 0.02:
+            if any(obj in label_lower for obj in critical_objects + urgent_proximity):
+                logger.info(f"  🟠 HIGH (traffic-critical): {label} at {relative_size*100:.1f}% of frame")
+                return "high"
+            else:
+                return "normal"
+        
+        # Small objects - still prioritize traffic signals
+        elif any(obj in label_lower for obj in critical_objects):
+            logger.info(f"  🟡 HIGH (traffic signal): {label}")
+            return "high"
+        elif any(obj in label_lower for obj in high_objects):
+            return "normal"
+        else:
+            return "low"
+
+    # STANDARD MODE: Priority based on color problematic-ness
     if any(obj in label_lower for obj in critical_objects):
         return "critical" if is_problematic else "high"
     elif any(obj in label_lower for obj in high_objects):

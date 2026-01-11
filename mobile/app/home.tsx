@@ -13,6 +13,7 @@ import {
   ScrollView,
   ActivityIndicator,
   Dimensions,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -136,6 +137,11 @@ export default function HomeScreen() {
     return (
       <SafeAreaView style={styles.container}>
         <View style={styles.loadingContainer}>
+          <Image
+            source={require("../assets/logo.png")}
+            style={styles.loadingLogo}
+            resizeMode="contain"
+          />
           <ActivityIndicator size="large" color={COLORS.accent} />
           <Text style={styles.loadingText}>Loading...</Text>
         </View>
@@ -236,11 +242,18 @@ export default function HomeScreen() {
       >
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={styles.greeting}>
-              Welcome{user ? `, ${user.username}` : ""}
-            </Text>
-            <Text style={styles.appTitle}>TRUE LIGHT</Text>
+          <View style={styles.headerLeft}>
+            <Image
+              source={require("../assets/logo.png")}
+              style={styles.logo}
+              resizeMode="contain"
+            />
+            <View>
+              <Text style={styles.greeting}>
+                Welcome{user ? `, ${user.username}` : ""}
+              </Text>
+              <Text style={styles.appTitle}>TRUE LIGHT</Text>
+            </View>
           </View>
           <Pressable style={styles.avatarButton} onPress={handleLogout}>
             <Text style={styles.avatarText}>
@@ -384,6 +397,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  loadingLogo: {
+    width: 120,
+    height: 120,
+    marginBottom: 24,
+  },
   loadingText: {
     marginTop: SIZES.spacingMedium,
     fontSize: SIZES.textMedium,
@@ -399,6 +417,15 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 24,
+  },
+  headerLeft: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  logo: {
+    width: 40,
+    height: 40,
   },
   greeting: {
     fontSize: 14,
