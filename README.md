@@ -1,26 +1,33 @@
-# Delta - Traffic Signal Assistant
+# TrueLight - Intelligent Vision Assistant
 
-An accessibility-first mobile application that helps color-blind and visually impaired users safely navigate traffic signals through real-time detection and audio feedback.
+An accessibility-first mobile application that helps color-blind and visually impaired users safely navigate their environment through AI-powered detection, real-time audio feedback, and voice commands.
 
 ## The Problem
 
-Traffic signals rely heavily on color to communicate critical safety information. For the estimated 300 million people worldwide with color vision deficiency, and many more with low vision, distinguishing between red, yellow, and green lights can be challenging and potentially dangerous.
+Traffic signals and many everyday objects rely heavily on color to communicate critical information. For the estimated 300 million people worldwide with color vision deficiency, and many more with low vision, distinguishing certain colors can be challenging and potentially dangerous.
 
 ## The Solution
 
-Delta uses your phone's camera to detect traffic signals in real-time and provides clear, immediate audio feedback:
-
-- **"Red light. Stop."**
-- **"Yellow light. Prepare to stop."** 
-- **"Green light. Safe to proceed."**
+TrueLight uses your phone's camera to detect traffic signals and objects in real-time, providing clear, immediate audio feedback customized for your specific type of color vision.
 
 ### Key Features
 
-- **Colorblindness-Aware**: Takes a quick vision assessment to customize feedback for your specific type of color vision
-- **Position Cues**: For users with red-green colorblindness, announces the position of the lit signal (top/middle/bottom)
-- **High Contrast UI**: Dark theme with large text and distinct visual indicators
-- **Offline Audio**: Uses device TTS for reliable, instant audio feedback
-- **Simple Controls**: Minimal interaction required - just point and listen
+- **AI Assistant "Sierra"**: Ask questions about your surroundings using natural voice commands
+- **Multi-Object Detection**: Detects traffic signals, signs, vehicles, and other hazards
+- **Colorblindness-Aware**: Takes a vision assessment to customize feedback for your specific color profile
+- **Natural Voice (ElevenLabs)**: Uses ElevenLabs TTS for natural voice output on critical alerts
+- **Bounding Box Overlay**: Visual brackets around detected objects, color-coded for problematic colors
+- **Position Cues**: Announces the position of signals for users with red-green colorblindness
+- **Hands-Free Interaction**: Voice commands with wake words ("Hey TrueLight", "Sierra")
+- **Offline Audio**: Falls back to device TTS for reliable, instant feedback
+
+## Voice Commands
+
+Say "Hey TrueLight" or "Sierra" followed by:
+- **"What do you see?"** - Get a detailed scene description
+- **"What color is the light?"** - Quick signal check
+- **"Can I cross?"** - Check if it's safe to proceed
+- **"Help"** - List available commands
 
 ## How Accessibility is Addressed
 
@@ -147,8 +154,18 @@ Scan the QR code with Expo Go on your phone.
 ## Tech Stack
 
 - **Mobile**: Expo, React Native, TypeScript, Expo Camera, Expo Speech
-- **Backend**: Next.js 15, TypeScript, App Router
+- **Backend**: Next.js 15, TypeScript, App Router, ElevenLabs TTS
+- **AI**: Google Gemini Vision (scene analysis), Roboflow YOLO (object detection)
+- **Detection**: Roboflow traffic light model + COCO object detection
 - **Deployment**: Vercel (backend), Expo Go (mobile)
+
+## Services Required
+
+| Service | Purpose | Free Tier |
+|---------|---------|-----------|
+| [Roboflow](https://roboflow.com) | Object detection | 10,000 calls/month |
+| [Google AI Studio](https://aistudio.google.com) | Gemini AI assistant | Free tier available |
+| [ElevenLabs](https://elevenlabs.io) | Natural TTS | 10,000 chars/month |
 
 ## Hackathon Tradeoffs
 
@@ -163,12 +180,13 @@ To ship in 24 hours, we made these conscious tradeoffs:
 
 ## Future Improvements
 
-- [ ] YOLO object detection for better accuracy
+- [ ] Continuous voice listening with wake word detection
+- [ ] Facial recognition for familiar people
 - [ ] Pedestrian signal detection (walk/don't walk)
-- [ ] Flashing signal detection
-- [ ] Persistent user preferences
+- [ ] Persistent user preferences in cloud
 - [ ] Apple Watch / WearOS companion app
 - [ ] Haptic feedback option
+- [ ] Multi-language support
 
 ## License
 
@@ -176,4 +194,4 @@ MIT
 
 ---
 
-Built with ❤️ for accessibility at [Hackathon Name]
+Built with ❤️ for accessibility | **TrueLight** - See the world clearly

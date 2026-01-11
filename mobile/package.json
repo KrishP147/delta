@@ -13,6 +13,7 @@
     "expo": "~54.0.31",
     "expo-av": "~16.0.8",
     "expo-camera": "~17.0.10",
+    "expo-file-system": "~19.0.21",
     "expo-router": "~6.0.21",
     "expo-speech": "~14.0.8",
     "expo-status-bar": "~3.0.9",
