@@ -25,7 +25,7 @@
         "backgroundColor": "#000000"
       },
       "permissions": ["CAMERA"],
-      "edgeToEdgeEnabled": true
+      "edgeToEdgeEnabled": false
     },
     "platforms": ["ios", "android"],
     "plugins": [

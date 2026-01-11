@@ -302,9 +302,16 @@ function mapCocoToDetectable(cocoClass: string): {
  * Checks if the backend is reachable
  * If not, enables direct Roboflow mode
  */
+let healthCheckDone = false;
+
 export async function checkHealth(): Promise<boolean> {
+  // Only check once per session to avoid spam
+  if (healthCheckDone && useDirectRoboflow) {
+    return true; // Already determined to use direct Roboflow
+  }
+
   try {
-    console.log('[API] Checking health at:', `${API_BASE_URL}/api/health`);
+    console.log('[API] Checking backend health...');
 
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 3000);
@@ -315,18 +322,20 @@ export async function checkHealth(): Promise<boolean> {
     });
 
     clearTimeout(timeoutId);
+    healthCheckDone = true;
 
     if (response.ok) {
-      console.log('[API] Health check passed - using backend');
+      console.log('[API] Backend connected');
       useDirectRoboflow = false;
       return true;
     } else {
-      console.log('[API] Health check failed - using direct Roboflow');
+      console.log('[API] Backend unavailable - using direct Roboflow API');
       useDirectRoboflow = true;
       return true; // Return true because direct Roboflow will work
     }
   } catch (error) {
-    console.log('[API] Backend unreachable - using direct Roboflow');
+    healthCheckDone = true;
+    console.log('[API] Backend unreachable - using direct Roboflow API');
     useDirectRoboflow = true;
     return true; // Return true because direct Roboflow will work
   }
