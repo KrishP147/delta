@@ -23,6 +23,7 @@ class ColorBlindnessType(Enum):
     TRITANOPIA = "tritanopia"       # Blue-blind
     TRITANOMALY = "tritanomaly"     # Blue-weak
     ACHROMATOPSIA = "achromatopsia" # Complete color blindness
+    LOW_VISION = "low_vision"       # General visual impairment
 
 
 # HSV color ranges for detection
@@ -109,6 +110,7 @@ PROBLEMATIC_COLORS = {
         "yellow", "gold"
     ],
     ColorBlindnessType.ACHROMATOPSIA: list(COLOR_RANGES.keys()),  # All colors problematic
+    ColorBlindnessType.LOW_VISION: [],  # Low vision users prioritize by size, not color
 }
 
 # Human-readable color names with more descriptive labels
