@@ -17,8 +17,7 @@ TrueLight helps people with color vision deficiency navigate safely by:
 **Mobile:** Expo 51+, React Native, TypeScript, Zustand  
 **Backend:** Next.js 15, TypeScript, Node.js  
 **Detection:** Python 3.8+, FastAPI, OpenCV, YOLOv3-tiny  
-**Audio:** Expo Speech (primary), ElevenLabs (optional)  
-**AI Assistant:** Google Gemini 2.5 Flash (optional)
+**Audio:** ElevenLabs (natural voice), Expo Speech (fallback)
 
 ## Features
 
@@ -27,11 +26,10 @@ TrueLight helps people with color vision deficiency navigate safely by:
 - Support for 9 types of colorblindness including low vision
 - Ishihara color vision test
 - Adaptive visual alerts using colors the user can see
-- Text-to-speech audio alerts
+- ElevenLabs natural voice text-to-speech
 - Transport mode adaptation (walking, biking, driving, passenger)
 - Motion tracking for moving objects
 - Low vision mode with proximity-based prioritization
-- Optional AI scene description
 
 ## Project Structure
 
@@ -114,11 +112,10 @@ ELEVENLABS_API_KEY=your_key_here       # Optional - for natural TTS
 
 ## Audio Configuration
 
-**Primary TTS:** Expo Speech (built-in, works offline)  
-**Optional TTS:** ElevenLabs (natural voice, requires API key in .env)  
-**AI Assistant:** Google Gemini (scene description, requires API key in .env)
+**Primary TTS:** ElevenLabs (natural voice, requires API key in .env)  
+**Fallback TTS:** Expo Speech (built-in, works offline)
 
-Gemini is used for AI-powered scene analysis, NOT for speech synthesis.
+ElevenLabs provides human-like voice alerts for better comprehension in urgent situations.
 
 ## Colorblindness Types Supported
 
