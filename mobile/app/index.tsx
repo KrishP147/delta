@@ -13,6 +13,7 @@ import {
   getColorblindType,
   setColorblindType,
   completeOnboarding,
+  isOnboardingComplete,
 } from "../services/storage";
 import { speak } from "../services/speech";
 import { useAuth } from "../contexts/AuthContext";
@@ -56,6 +57,8 @@ export default function WelcomeScreen() {
   const { user, isAuth, loading: authLoading, logout } = useAuth();
   const [hasCompletedSetup, setHasCompletedSetup] = useState(false);
   const [userColorblindType, setUserColorblindType] =
+    useState<ColorblindnessType>("unknown");
+  const [selectedType, setSelectedType] =
     useState<ColorblindnessType>("unknown");
 
   useEffect(() => {
@@ -158,11 +161,14 @@ export default function WelcomeScreen() {
 
           <Pressable
             style={styles.secondaryButton}
-            onPress={handleRetakeTest}
+            onPress={() => {
+              setHasCompletedSetup(false);
+              speak("Retaking vision test");
+            }}
             accessibilityRole="button"
-            accessibilityLabel="Retake the color vision test"
+            accessibilityLabel="Change vision settings"
           >
-            <Text style={styles.secondaryButtonText}>Retake Vision Test</Text>
+            <Text style={styles.secondaryButtonText}>Change Settings</Text>
           </Pressable>
 
           <Pressable
@@ -376,8 +382,32 @@ const styles = StyleSheet.create({
     marginBottom: SIZES.spacingMedium,
     textAlign: "left",
   },
+  descriptionCard: {
+    backgroundColor: COLORS.backgroundSecondary,
+    borderRadius: SIZES.borderRadius,
+    padding: SIZES.spacingLarge,
+    marginBottom: SIZES.spacingLarge,
+    width: "100%",
+  },
+  description: {
+    fontSize: SIZES.textSmall,
+    color: COLORS.textPrimary,
+    lineHeight: 26,
+    marginBottom: SIZES.spacingMedium,
+    textAlign: "left",
+  },
   optionsContainer: {
     gap: SIZES.spacingSmall,
+  },
+  optionButton: {
+    backgroundColor: COLORS.backgroundSecondary,
+    borderRadius: SIZES.borderRadius,
+    padding: SIZES.spacingMedium,
+    marginBottom: SIZES.spacingSmall,
+    flexDirection: "row",
+    alignItems: "center",
+    borderWidth: 1,
+    borderColor: COLORS.border,
   },
   testPromptTitle: {
     fontSize: SIZES.textMedium,
@@ -412,25 +442,6 @@ const styles = StyleSheet.create({
     color: COLORS.green,
     textAlign: "center",
   },
-  primaryButton: {
-    backgroundColor: COLORS.green,
-    paddingHorizontal: SIZES.spacingLarge * 2,
-    paddingVertical: SIZES.buttonPadding,
-    borderRadius: SIZES.borderRadius,
-    marginBottom: SIZES.spacingMedium,
-    minWidth: 250,
-    alignItems: "center",
-    justifyContent: "center",
-    minHeight: SIZES.touchTarget,
-  },
-  primaryButtonText: {
-    color: COLORS.background,
-    fontSize: SIZES.textMedium,
-    fontWeight: "bold",
-    letterSpacing: 2,
-    textAlign: "center",
-    width: "100%",
-  },
   secondaryButton: {
     backgroundColor: "transparent",
     paddingHorizontal: SIZES.spacingLarge,
@@ -438,6 +449,17 @@ const styles = StyleSheet.create({
     borderRadius: SIZES.borderRadius,
     borderWidth: 1,
     borderColor: COLORS.border,
+    minWidth: 250,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: SIZES.touchTarget,
+    marginBottom: SIZES.spacingMedium,
+  },
+  secondaryButtonText: {
+    color: COLORS.textSecondary,
+    fontSize: SIZES.textSmall,
+    textAlign: "center",
+    width: "100%",
   },
   optionButtonSelected: {
     backgroundColor: COLORS.textPrimary,
@@ -469,8 +491,6 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.background,
     justifyContent: "center",
     alignItems: "center",
-    justifyContent: "center",
-    minHeight: SIZES.touchTarget,
   },
   checkmarkText: {
     fontSize: 14,
@@ -515,6 +535,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: SIZES.spacingLarge,
     borderRadius: SIZES.borderRadius,
     alignItems: "center",
+    justifyContent: "center",
+    minHeight: SIZES.touchTarget,
+    width: "100%",
   },
   primaryButtonDisabled: {
     backgroundColor: COLORS.border,
@@ -523,6 +546,8 @@ const styles = StyleSheet.create({
     color: COLORS.buttonText,
     fontSize: SIZES.textMedium,
     fontWeight: "600",
+    textAlign: "center",
+    width: "100%",
   },
   primaryButtonTextDisabled: {
     color: COLORS.textSecondary,
@@ -533,7 +558,6 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: SIZES.spacingLarge,
     opacity: 0.6,
-    textAlign: "center",
   },
   logoutButton: {
     backgroundColor: "transparent",
