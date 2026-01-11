@@ -62,23 +62,18 @@ export default function WelcomeScreen() {
     useState<ColorblindnessType>("normal");
 
   useEffect(() => {
-    // Check authentication - redirect to login if not authenticated
-    if (!authLoading && !isAuth) {
-      router.replace("/login");
-      return;
+    // Skip auth check - app works without authentication
+    // Users can optionally login later for cloud sync features
+    
+    // Check onboarding status
+    const completed = isOnboardingComplete();
+    setHasCompletedSetup(completed);
+    if (completed) {
+      setUserColorblindType(getColorblindType());
     }
+  }, []);
 
-    // If authenticated, check onboarding status
-    if (isAuth) {
-      const completed = isOnboardingComplete();
-      setHasCompletedSetup(completed);
-      if (completed) {
-        setUserColorblindType(getColorblindType());
-      }
-    }
-  }, [isAuth, authLoading, router]);
-
-  // Show loading screen while checking authentication
+  // Show loading screen only while auth is initializing (brief)
   if (authLoading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -88,11 +83,6 @@ export default function WelcomeScreen() {
         </View>
       </SafeAreaView>
     );
-  }
-
-  // If not authenticated, this won't render (redirected to login)
-  if (!isAuth) {
-    return null;
   }
 
   const handleSelectType = (type: SelectableType) => {
@@ -173,14 +163,25 @@ export default function WelcomeScreen() {
             <Text style={styles.secondaryButtonText}>Change Settings</Text>
           </Pressable>
 
-          <Pressable
-            style={styles.logoutButton}
-            onPress={handleLogout}
-            accessibilityRole="button"
-            accessibilityLabel="Logout"
-          >
-            <Text style={styles.logoutButtonText}>Logout</Text>
-          </Pressable>
+          {isAuth ? (
+            <Pressable
+              style={styles.logoutButton}
+              onPress={handleLogout}
+              accessibilityRole="button"
+              accessibilityLabel="Logout"
+            >
+              <Text style={styles.logoutButtonText}>Logout</Text>
+            </Pressable>
+          ) : (
+            <Pressable
+              style={styles.loginButton}
+              onPress={() => router.push('/login')}
+              accessibilityRole="button"
+              accessibilityLabel="Login for cloud sync"
+            >
+              <Text style={styles.loginButtonText}>Login (Optional)</Text>
+            </Pressable>
+          )}
         </ScrollView>
       </SafeAreaView>
     );
@@ -576,6 +577,25 @@ const styles = StyleSheet.create({
     color: COLORS.textSecondary,
     fontSize: SIZES.textSmall,
     opacity: 0.7,
+    textAlign: "center",
+    width: "100%",
+  },
+  loginButton: {
+    backgroundColor: "transparent",
+    paddingHorizontal: SIZES.spacingLarge,
+    paddingVertical: SIZES.buttonPadding / 2,
+    borderRadius: SIZES.borderRadius,
+    borderWidth: 1,
+    borderColor: COLORS.border,
+    marginTop: SIZES.spacingLarge * 2,
+    minWidth: 250,
+    alignItems: "center",
+    justifyContent: "center",
+    minHeight: SIZES.touchTarget,
+  },
+  loginButtonText: {
+    color: COLORS.textSecondary,
+    fontSize: SIZES.textSmall,
     textAlign: "center",
     width: "100%",
   },
